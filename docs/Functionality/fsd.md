@@ -106,6 +106,7 @@ IR barrier reports jam / misread → information on the print screen and the pan
 Decided:
 
 - Each copy of a photo is its own CUPS job; copies are sent one after another. `[user]`
+- The guest chooses the number of copies in upstream's existing copies dialog (FR-7.16); only its UI is reused, the backend path is open. `[user]`
 - The Gutenprint backend runs with fast return **off** (`FAST_RETURN=0`), so printer errors during a print reach CUPS (NFR-13.2). `[derived]` R2 — to be confirmed by bench session B-1 (§17.3).
 - The print stack is custom; upstream print-limit functions may be reused once tested (§1.4). `[user]`
 
@@ -174,8 +175,7 @@ Dependencies point downward only. The ESP32 firmware (§11, §12) is listed unde
 | OD3 | Paper tray capacity and prints per ink cassette | §8 | paper-ink-counter.md says ~18 sheets and 56 prints; unconfirmed |
 | OD4 | Booth page reload during a print (e.g. session reload): what does the screen show? | FR-7.12 | The print screen is restored from the tracker's state. `proposed` |
 | OD5 | Guest presses a print button while busy: what is shown? | FR-6.10 | Short notice "Drucker beschäftigt – bitte warten, bis der aktuelle Druck fertig ist". `proposed` |
-| OD6 | Job cancelled by the backend (status `0x0A`): resend the copy, or treat as failed? | §5.2 (`CANCELLED`) | Decide after B-Q6 |
-| OD7 | Can the guest leave the print screen while their print runs (single booth screen; others want to take photos, FR-6.2)? | FR-7.1 | — |
+| OD6 | Job cancelled by the backend (status `0x0A`): resend the copy, or treat as failed? And after a cancelled print, does the booth go to the start screen (like FR-7.15) or back to the result view? | §5.2 (`CANCELLED`), FR-7.15 | Decide after B-Q6 has shown what `0x0A` means |
 | OD8 | What the panel shows and allows while the booth is not reachable | FR-12.6 | "Booth nicht verbunden", no decisions possible. `proposed` |
 
 ---
@@ -312,7 +312,7 @@ Decides whether the booth accepts a new print request. There is no print queue: 
 | FR-6.8 | Must | The rejection shall be enforced on the server for every print entry point (result screen, gallery, any API call), regardless of when the page was loaded. `[user]` | approved |
 | FR-6.9 | Must | Print buttons on pages already open (result screen, gallery) shall show as disabled within {{T_ui}} of the booth becoming busy, and enabled again within {{T_ui}} of it becoming free. `[user]` | approved (value open) |
 | FR-6.10 | Must | A rejected request shall create no CUPS job and shall show the guest the busy notice (OD5). `[user]` | approved (wording open) |
-| FR-6.2 | Must | While printing is busy or blocked, taking photos, showing the result and the QR code shall keep working. `[user]` | approved |
+| FR-6.2 | Must | While printing is blocked by a CUPS printer error and no print request is unfinished, taking photos, showing the result and the QR code shall keep working. `[user]` (While a request is unfinished the print screen stays up, FR-7.14.) | approved |
 | FR-6.4 | Must | On an operator decision for a job in `ERROR` or `AWAIT_OPERATOR`, the booth shall first make CUPS match it ("Foto ist da": cancel the job if still pending; "Foto fehlt": keep it), then re-enable the queue. `[user]` | approved |
 | FR-6.11 | Must | Only the booth's reconciliation (FR-6.4) shall re-enable the CUPS queue; no other automatic `cupsenable` shall run. `[derived]` R3 | approved |
 | FR-6.13 | Must | IR-barrier information alone shall not block printing. `[user]` | approved |
@@ -324,7 +324,7 @@ Decides whether the booth accepts a new print request. There is no print queue: 
 | FR-6.8 | Gallery page loaded before the print started · press its print button while busy | rejected, notice shown | CUPS job created | integration |
 | FR-6.9 | Gallery open · start a print elsewhere | gallery print buttons disabled within T_ui | button stays active | integration |
 | FR-6.10 | Busy · press print | busy notice | CUPS job; silent nothing | integration |
-| FR-6.2 | Busy · guest takes a photo | photo + QR shown | photo flow blocked | integration |
+| FR-6.2 | Printer error, no request unfinished · guest takes a photo | photo + QR shown | photo flow blocked | integration |
 | FR-6.4 | see §5.4 | | | integration + bench |
 | FR-6.11 | Queue stopped by simulated backend · wait 5 min | queue stays stopped until operator decision | queue re-enabled by anything else | integration |
 | FR-6.13 | IR jam info active, no CUPS error, request finished · new print request | accepted | rejected | unit |
@@ -335,7 +335,11 @@ Decides whether the booth accepts a new print request. There is no print queue: 
 
 | ID | Pri | Requirement | Status |
 |---|---|---|---|
-| FR-7.1 | Must | After the guest presses Drucken, the print screen shall show the current stage of that request until the last copy is `DONE` or `CANCELLED`. `[user]` Whether the guest may leave it earlier: OD7. | approved |
+| FR-7.1 | Must | After the guest presses Drucken, the print screen shall show the current stage of that request until the last copy is `DONE` or `CANCELLED`. `[user]` | approved |
+| FR-7.14 | Must | While a print request is unfinished, the print screen shall offer no way to leave it, including during `ERROR` and `AWAIT_OPERATOR`; no photo can be started until it closes. `[user]` | approved |
+| FR-7.15 | Must | When the print screen closes after the last copy is `DONE`, the booth shall show the guest start screen immediately; the result view of that photo, with its print button, shall not be shown again. `[user]` | approved |
+| FR-7.16 | Must | With `print.max_multi` > 1, the guest shall choose the number of copies in upstream's existing copies dialog (minus/plus, 1…`print.max_multi`, "Drucken" / "Abbrechen"; `assets/js/tools.js` `askCopies`). How the chosen number reaches the print stack is not yet decided. `print.max_multi` stays an admin-panel setting, unchanged. `[user]` | approved |
+| FR-7.17 | Must | Printing a photo again from the gallery shall stay possible, subject to the Busy Gate (§6); staff use it for reprints and can hide the gallery button in the admin panel. `[user]` | approved |
 | FR-7.2 | Must | Stage changes shall appear on screen within {{T_ui}} of the event reaching the booth. | approved (value open) |
 | FR-7.3 | Must | All texts shall be German. `[user]` | approved |
 | FR-7.4 | Must | Layer stages shall be named yellow, magenta, cyan and **Schutzschicht** (clear coat); the 4th stage shall never be called black/"Schwarz"/"K". `[user]` | approved |
@@ -352,6 +356,11 @@ Decides whether the booth accepts a new print request. There is no print queue: 
 | ID | Precondition · stimulus | Expected observation | Must NOT happen | Tier |
 |---|---|---|---|---|
 | FR-7.1 | Full print | every stage shown, closes after "Fertig" | screen closes before `DONE` | integration |
+| FR-7.14 | `ERROR` on copy 1 · tap everywhere on the screen, swipe, press keys | print screen stays; no photo starts | screen closes; start screen or photo countdown reachable | integration |
+| FR-7.15 | Full print · "Fertig" screen closes | start screen shown at once | result view of that photo shown; its print button pressable | integration |
+| FR-7.16 | `print.max_multi` = 3 · press Drucken, choose 2, confirm | 2 copies printed in sequence | more than 3 selectable; dialog skipped | integration |
+| FR-7.16 | Copies dialog open · press Abbrechen | no print request | CUPS job created | integration |
+| FR-7.17 | Photo printed before, booth idle · print it from the gallery | printed once more | print refused because printed before | integration |
 | FR-7.4 | `LAYER_4` | "Schutzschicht" | "Schwarz", "K" | unit |
 | FR-7.5 | CUPS reason `Ink Cassette Empty (06)` | "Farbkassette leer" | raw message only | unit |
 | FR-7.6 | CUPS reason `Unknown Error (08)` | generic text + "Unknown Error (08)" | blank or only "Fehler" | unit |
@@ -656,7 +665,7 @@ Run once, when the ESP32 unit with IR barriers is built, so timings are measured
 
 ```yaml
 document_status: draft
-fsd_version: 0.2
+fsd_version: 0.3
 repository: starkerflamingo32/photobooth (branch booth)
 baseline_commit: e8c2cbd3
 applicable_firmware_version: none yet (ESP32 unit not built)
@@ -671,7 +680,12 @@ change_history:
       CUPS errors only, IR observations as information; operator panel (rotary encoder + I²C OLED);
       one CUPS job per copy; FAST_RETURN=0; no sensor-less fallback booth; bench session B-1;
       print limit and auto-print out of scope until tested in the virtual test setup
+  - 2026-11-24 v0.3: OD7 decided — the print screen stays up until the request is finished, no early exit (FR-7.14);
+      FR-6.2 narrowed to printer errors with no request running; start screen right after the print screen closes
+      (FR-7.15); upstream copies dialog reused for choosing copies (FR-7.16); gallery reprints stay allowed (FR-7.17);
+      screen after a cancelled print added to OD6
 superseded_requirements:
+  - FR-6.2 v0.2 (photos keep working while a print runs) — print screen stays up (FR-7.14)
   - FR-5.7 (fallback HANDED_OVER) — no booth without ESP32 unit
   - FR-5.8 (queue position) — no print queue (FR-6.1)
   - FR-6.3 (keep queued jobs) — no print queue
@@ -682,7 +696,7 @@ superseded_requirements:
   - FR-10.3 v0.1, FR-10.4 (CUPS-only fallback stages) — replaced by OD1
   - NFR-12.2 (some mechanism re-enables the queue) — booth reconciliation (FR-6.4, FR-6.11)
   - FR-13.x → FR-14.x (renumbered with the new §12)
-open_decisions: see §4.4 (OD1–OD8), each naming the requirement it gates
+open_decisions: see §4.4 (OD1–OD6, OD8), each naming the requirement it gates
 related_test_baseline: none yet (B-1 not run)
 ```
 
