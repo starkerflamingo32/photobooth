@@ -104,7 +104,7 @@ The phone is the operator's main interface; the panel is the fallback when the p
 | Driver | CUPS queue `selphy`, device `gutenprint53+usb://canon-cp1300/…`, `gutenprint.5.3://canon-cp1300`, `PageSize=Postcard`, `StpBorderless=True` | `[code]` photobooth-setup, laptop |
 | Backend | Gutenprint 5.3.4 (Debian 12) `backend_canonselphyneo`: under CUPS *fast return* is on unless `FAST_RETURN` is set; on most printer errors it stops the queue and leaves the job pending (`CUPS_BACKEND_STOP`), on status `0x0A` it cancels the job (`CUPS_BACKEND_CANCEL`) | `[code]` Gutenprint source (master; same switch in the installed binary) |
 | Booth host | Acer Switch 3, Debian 12, native Photobooth install | `[code]` |
-| ESP32 unit | Connected to the booth host over USB. Two HW-201 IR modules (§11.2), each with an added analog wire to an ESP32 ADC input: the rear one rebuilt as a through-beam barrier at the rear paper exit, the front one as a reflective sensor over the output tray. Minimal operator panel (fallback, §12) with a rotary encoder and an I²C OLED, mounted inside the booth for use with the back opened | `[user]` |
+| ESP32 unit | ESP32-C6 mini board `[user]`, connected to the booth host over USB. Two HW-201 IR modules (§11.2), each with an added analog wire to an ADC input: the rear one rebuilt as a through-beam barrier at the rear paper exit, the front one as a reflective sensor over the output tray. Minimal operator panel (fallback, §12) with a rotary encoder and an I²C OLED, mounted inside the booth for use with the back opened | `[user]` |
 | Paper path | During each pass the sheet comes out at the back, then at the front, and goes fully back inside at both sides; the finished print is ejected at the front onto the output tray | `[user]` |
 | Shared USB hub | Printer and camera share one USB hub on the laptop; adding the ESP32 there is a risk (R6) | `[code]` |
 | Booth router | Router inside the booth, always on during an event; its Wi-Fi is joined only by the booth laptop and the operator's phone, never by guests. Whether it is the same LTE router that carries the photo uploads: (assumed) yes | `[user]` |
@@ -513,8 +513,9 @@ Both sensors are **HW-201** IR obstacle modules `[user]`: an IR LED and a photod
 Wiring and electrical (proposed unless marked):
 
 - **Supply 3.3 V** from the ESP32 board. OUT is pulled up to the module supply, so at 5 V it would put 5 V on an ESP32 pin, which is not 5 V tolerant. `[derived]`
-- **Analog wire:** from the LM393 input connected to the photodiode (find it with a multimeter: the voltage at that pin changes when the sensor is covered and uncovered; the other input is the potentiometer and does not change) to an ESP32 **ADC1** pin (GPIO 32–39; ADC2 is unusable while Wi-Fi is on). A 10–100 nF capacitor from that pin to GND steadies the reading of this high-impedance node; it slows the signal by about a millisecond at most, irrelevant for paper moving over seconds.
+- **Analog wire:** from the LM393 input connected to the photodiode (find it with a multimeter: the voltage at that pin changes when the sensor is covered and uncovered; the other input is the potentiometer and does not change) to an ADC pin of the ESP32-C6. A 10–100 nF capacitor from that pin to GND steadies the reading of this high-impedance node; it slows the signal by about a millisecond at most, irrelevant for paper moving over seconds.
 - **Digital OUT** stays unconnected; the potentiometer setting does not matter (the indicator LED still helps when aiming).
+- **ADC (ESP32-C6):** one 12-bit SAR ADC (ADC1, raw 0–4095) on GPIO0–GPIO6; the C6 has no ADC2, so Wi-Fi does not restrict the choice. Check which of GPIO0–6 the board brings out and leaves free. Effective resolution is about 9–10 bits; use the highest attenuation (12 dB), average several samples per reading and apply ESP-IDF calibration (`adc_cali`). The usable input range at 12 dB (roughly up to about 3 V) is to be confirmed from the C6 datasheet; the B-1 raw logs (FR-11.14) show whether the HW-201 signal stays inside it. (proposed; range assumed)
 - **Broken analog wire:** a weak pull-down (about 1 MΩ) from the ADC pin to GND makes a broken or loose wire read near 0, which FR-11.12 reports as a sensor fault. Its load on the photodiode signal is small next to the module's own resistor. (proposed)
 - **Signal sense:** for both sensors, much light at the photodiode means *clear* (rear: beam unbroken; front: reflector visible) and little light means *covered*. The module's indicator LED is therefore lit when clear, the opposite of its "obstacle" meaning — useful for aiming.
 - **LED drive:** the module powers its IR LED permanently, so no LED-off reading is possible on the front sensor. The rear LED, already on its own wires, may instead be driven from a GPIO through a resistor, which allows LED-off readings for the rear sensor (FR-11.9).
@@ -937,10 +938,10 @@ Run once, when the ESP32 unit with IR barriers is built, so timings are measured
 
 ```yaml
 document_status: draft
-fsd_version: 0.11
+fsd_version: 0.12
 repository: starkerflamingo32/photobooth (branch booth)
 baseline_commit: e8c2cbd3
-applicable_firmware_version: none yet (ESP32 unit not built)
+applicable_firmware_version: none yet (ESP32 unit not built; board ESP32-C6 mini)
 author: booth owner, with Claude
 reviewers: []
 approval_status: not approved
@@ -982,6 +983,8 @@ change_history:
       (rear only); FR-11.17 flash immunity, FR-11.18 digital/analog cross-check added; state from the analog reading
   - 2026-11-25 v0.11: FR-11.18 removed (digital OUT not used, little value); weak pull-down on each ADC pin so a
       broken analog wire shows as a sensor fault (FR-11.12)
+  - 2026-11-25 v0.12: ESP32 board is an ESP32-C6 mini: ADC1 on GPIO0–6, 12-bit, 12 dB attenuation, calibration;
+      classic-ESP32 pin references (GPIO 32–39, ADC2 / Wi-Fi) removed
 superseded_requirements:
   - FR-11.18 v0.10 (digital OUT / analog cross-check) — removed; broken wire caught by a pull-down and FR-11.12
   - FR-11.9 v0.9 (Must: LED-off/LED-on subtraction for both sensors) — May, rear only; HW-201 LEDs are always on (FR-11.17)
