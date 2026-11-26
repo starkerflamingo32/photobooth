@@ -150,7 +150,8 @@ run() {
     echo "Start the phone video of printer front and back now; show this screen's clock in it once."
     echo
     echo "Keys while printing:  p = paper out the BACK (a pass)   e = photo EJECTED at the front"
-    echo "                      x = something odd (note it)       q = stop"
+    echo "  error prints:       f = cause fixed   b = printer's print button pressed   t = paper tray removed"
+    echo "                      x = something odd (type a note)   q = stop"
     read -r -p "Press Enter to send the print... " _
 
     poll_once
@@ -183,7 +184,10 @@ run() {
             case $key in
                 p) passes=$((passes + 1)); echo "$(now) PASS $passes (back)" | tee -a "$OUT/events.log" ;;
                 e) echo "$(now) EJECT (front)" | tee -a "$OUT/events.log" ;;
-                x) read -r -p "note: " note; echo "$(now) NOTE $note" | tee -a "$OUT/events.log" ;;
+                f) echo "$(now) FIXED (cause removed: paper refilled / cassette back / jam cleared)" | tee -a "$OUT/events.log" ;;
+                b) echo "$(now) BUTTON (printer's own print button pressed)" | tee -a "$OUT/events.log" ;;
+                t) echo "$(now) TRAY OUT (paper tray removed for the duplicate check)" | tee -a "$OUT/events.log" ;;
+                x) read -r -p "note (polling pauses while typing): " note; echo "$(now) NOTE $note" | tee -a "$OUT/events.log" ;;
                 q) echo "$(now) STOP by user" | tee -a "$OUT/events.log"; break ;;
             esac
         fi
