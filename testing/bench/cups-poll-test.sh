@@ -6,13 +6,16 @@
 # Run on the booth laptop:
 #   sudo ./cups-poll-test.sh prepare      # FAST_RETURN=0 + LogLevel debug, restart CUPS
 #   ./cups-poll-test.sh run <image.jpg>   # poll, send one print, mark events by key
+#   ./cups-poll-test.sh watch <dir> [job]  # poll again without sending (duplicate check after run)
 #   sudo ./cups-poll-test.sh collect <dir> # copy the CUPS error_log for the run (redacted)
+#   sudo ./cups-poll-test.sh printer-poll <dir> # queue stopped: ask the printer itself (Ctrl-C before cupsenable)
 #   sudo ./cups-poll-test.sh restore [--keep-fast-return-off]
 set -eu
 
 QUEUE=selphy
 CONF=/etc/cups/cupsd.conf
 BACKUP=/etc/cups/cupsd.conf.before-poll-test
+BACKEND_BIN=/usr/lib/cups/backend/gutenprint53+usb
 FILES_CONF=/etc/cups/cups-files.conf
 FILES_BACKUP=/etc/cups/cups-files.conf.before-poll-test
 LP_OPTS=(-o landscape -o fit-to-page)   # same as Photobooth's print command
@@ -149,9 +152,7 @@ run() {
     fi
     echo "Start the phone video of printer front and back now; show this screen's clock in it once."
     echo
-    echo "Keys while printing:  p = paper out the BACK (a pass)   e = photo EJECTED at the front"
-    echo "  error prints:       f = cause fixed   b = printer's print button pressed   t = paper tray removed"
-    echo "                      x = something odd (type a note)   q = stop"
+    print_keys
     read -r -p "Press Enter to send the print... " _
 
     poll_once
@@ -160,8 +161,22 @@ run() {
     echo "$(now) LP $resp" | tee -a "$OUT/events.log"
     JOB=$(echo "$resp" | grep -o "$QUEUE-[0-9]*" | sed 's/.*-//')
     write_ipp_tests
+    AUTO_STOP=1
+    poll_loop
+}
 
+print_keys() {
+    echo "Keys while printing:  p = paper out the BACK (a pass)   e = photo EJECTED at the front"
+    echo "  error prints:       f = cause fixed   b = printer's print button pressed"
+    echo "                      t = paper tray removed   i = paper tray back in"
+    echo "                      x = something odd (type a note)   q = stop"
+}
+
+# Poll until q (or, after a normal print, until the eject is marked and the
+# job has been finished for TAIL_AFTER seconds).
+poll_loop() {
     local passes=0 done_at=0 last_state="" key line state
+    passes=$(grep -c ' PASS ' "$OUT/events.log" 2>/dev/null || true)
     while :; do
         local t; t=$(now)
         poll_once
@@ -176,7 +191,7 @@ run() {
         case $state in
             completed*|canceled*|aborted*) [ "$done_at" -gt 0 ] || done_at=$SECONDS ;;
         esac
-        if [ "$done_at" -gt 0 ] && [ $((SECONDS - done_at)) -ge "$TAIL_AFTER" ] && grep -q ' EJECT' "$OUT/events.log"; then
+        if [ "$AUTO_STOP" = 1 ] && [ "$done_at" -gt 0 ] && [ $((SECONDS - done_at)) -ge "$TAIL_AFTER" ] && grep -q ' EJECT' "$OUT/events.log"; then
             echo "Job finished, eject marked and ${TAIL_AFTER}s tail done."
             break
         fi
@@ -187,6 +202,7 @@ run() {
                 f) echo "$(now) FIXED (cause removed: paper refilled / cassette back / jam cleared)" | tee -a "$OUT/events.log" ;;
                 b) echo "$(now) BUTTON (printer's own print button pressed)" | tee -a "$OUT/events.log" ;;
                 t) echo "$(now) TRAY OUT (paper tray removed for the duplicate check)" | tee -a "$OUT/events.log" ;;
+                i) echo "$(now) TRAY IN (paper tray back in)" | tee -a "$OUT/events.log" ;;
                 x) read -r -p "note (polling pauses while typing): " note; echo "$(now) NOTE $note" | tee -a "$OUT/events.log" ;;
                 q) echo "$(now) STOP by user" | tee -a "$OUT/events.log"; break ;;
             esac
@@ -197,6 +213,22 @@ run() {
     echo "== Events"; cat "$OUT/events.log"
     echo
     echo "Next: sudo $0 collect $OUT"
+}
+
+# Poll again without sending anything, appending to an earlier run's folder:
+# for the duplicate check (cupsenable) after run was stopped. Follows the job
+# given, or the queue's unfinished job.
+watch() {
+    OUT=${1:?usage: $0 watch <run dir> [job id]}
+    [ -f "$OUT/events.log" ] || { echo "$OUT has no events.log; not a run folder." >&2; exit 1; }
+    JOB=${2:-$(lpstat -W not-completed -o "$QUEUE" | head -n 1 | awk '{print $1}' | sed 's/.*-//')}
+    [ -n "$JOB" ] || { echo "No unfinished job on $QUEUE; give the job id: $0 watch $OUT <id>" >&2; exit 1; }
+    write_ipp_tests
+    exec > >(tee -a "$OUT/console.log") 2>&1
+    echo "$(now) WATCH started for job $JOB (nothing sent)" | tee -a "$OUT/events.log"
+    print_keys
+    AUTO_STOP=0
+    poll_loop
 }
 
 collect() {
@@ -217,9 +249,35 @@ collect() {
     fi
 }
 
+# While the queue is stopped after an error, no CUPS backend runs, so CUPS
+# cannot see the printer resume on its own (tray sensor) and print the held
+# photo. Ask the printer directly with the backend's standalone status query.
+# Only while the queue is disabled: a second process on the USB device during
+# a CUPS print could disturb it. Stop with Ctrl-C BEFORE running cupsenable.
+printer_poll() {
+    need_root printer-poll
+    local dir=${1:?usage: sudo $0 printer-poll <run dir>} log
+    log=$dir/printer-status.log
+    echo "Logging the printer's own status to $log every ~1 s. Ctrl-C before cupsenable."
+    while :; do
+        if ! lpstat -p "$QUEUE" | head -n 1 | grep -q disabled; then
+            echo "$(now) queue is enabled: a CUPS backend may be using the printer, stopping." | tee -a "$log"
+            break
+        fi
+        local out
+        out=$(BACKEND=canonselphyneo "$BACKEND_BIN" -s 2>&1 | grep -vE "^DEBUG: *$|Multi-Call|Copyright|WARRANTY|Licensed under" | sed "s/^/    /")
+        { echo "=== $(now)"; echo "$out"; } >> "$log"
+        echo "$(now) $(echo "$out" | grep -iE 'state:|status|error|media' | tr -s ' ' | tr '\n' ' ' | cut -c1-200)"
+        sleep 1
+    done
+    chown -R "${SUDO_USER:-root}:" "$dir"
+}
+
 case ${1:-} in
     prepare) prepare ;;
+    printer-poll) shift; printer_poll "$@" ;;
     run) shift; run "$@" ;;
+    watch) shift; watch "$@" ;;
     collect) shift; collect "$@" ;;
     restore) shift; restore "$@" ;;
     *) sed -n '2,12p' "$0"; exit 1 ;;
