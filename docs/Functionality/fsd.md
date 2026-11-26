@@ -8,7 +8,7 @@
 |---|---|
 | Created | 2026-11-23 |
 | Last updated | 2026-11-26 |
-| Load defined | **No** — bench session B-1 not run (§17.3; one pre-bench print P-1 done, §17.3.1), print-limit characterisation not run (§17.5), timing parameters open (Appendix A), open decisions (§4.4), Method/UserDocumentation planes not created yet |
+| Load defined | **No** — bench session B-1 not run (§17.3; pre-bench runs P-1 done: 2 normal prints, paper and ink errors, §17.3.1; jam still open), print-limit characterisation not run (§17.5), timing parameters open (Appendix A), open decisions (§4.4), Method/UserDocumentation planes not created yet |
 
 Full lifecycle metadata: Appendix D.
 
@@ -156,9 +156,9 @@ Dependencies point downward only. The ESP32 firmware (§11, §12) is listed unde
 
 | ID | Risk | Mitigation |
 |---|---|---|
-| R1 | `Paper Feed (02)` is reported both for an empty tray and a misfeed `[code]` — the message cannot be more specific than "Papier leer oder Papiereinzug gestört". With a known paper count the booth tells them apart (FR-8.6); otherwise the text covers both (Appendix B). |
+| R1 | `Paper Feed (02)` is reported both for an empty tray and a misfeed `[code]` (P-1: empty tray inserted → `Paper Feed (02)`; tray removed → `No Paper (03)`, §17.3.1) — the message cannot be more specific than "Papier leer oder Papiereinzug gestört". With a known paper count the booth tells them apart (FR-8.6); otherwise the text covers both (Appendix B). |
 | R2 | With fast return on, CUPS marks the job *completed* ~10–17 s in and never sees an error during the rest of the print `[code]`. P-1: the backend exits at "Printing YELLOW", 48 s before the eject `[code]`. | `FAST_RETURN=0` (NFR-13.2); CUPS *completed* never shown as "Fertig" (FR-5.6); status read failures are not errors (FR-9.4). |
-| R3 | After an error the backend leaves the job pending in a stopped queue. Pressing the printer's own print button prints the buffered photo; re-enabling the queue then sends the job again → duplicate. `[code]`/`[user]` | Reconcile before re-enabling (FR-6.4, FR-5.14); only the booth re-enables the queue (FR-6.11). Behaviour verified in B-1. |
+| R3 | After an error the backend leaves the job pending in a stopped queue. Pressing the printer's own print button prints the buffered photo; re-enabling the queue then sends the job again → duplicate. `[code]`/`[user]` P-1: duplicate confirmed (job 120 resent by `cupsenable`, §17.3.1); the printer resumes by itself, without the button, after paper and ink errors. | Reconcile before re-enabling (FR-6.4, FR-5.14); only the booth re-enables the queue (FR-6.11). Behaviour verified in B-1. |
 | R4 | IR barrier misreads (dust, a hand, a cable). `[user]` | Barrier observations are information only, never errors (FR-5.10). |
 | R5 | Pass timing differs per printer/temperature; wrong limits cause false stall information or late detection. | Limits measured in B-1 (Appendix A). |
 | R6 | ESP32 on the same USB hub as printer and camera; unexplained freezes at the 2026-11-22 event. | Out of this FSD's control; see event findings. Unit dropout handled (FR-10.2, OD1). |
@@ -169,6 +169,7 @@ Dependencies point downward only. The ESP32 firmware (§11, §12) is listed unde
 | R11 | The operator web UI adds network exposure: anyone on the booth Wi-Fi could make operator decisions. | WPA2 Wi-Fi joined only by laptop and operator phone; upstream admin login on the web UI (FR-12b.2); §15. |
 | R12 | Phone and panel used at the same time give conflicting decisions. | First confirmed decision wins; later ones are ignored and both interfaces show the decision made (FR-10.8). |
 | R13 | The fork is public and photobooth-setup is private: the fork's CI needs a token to build the stack, and test artifacts are visible to others. | Read-only fine-grained token on photobooth-setup only, as an Actions secret; synthetic test data only (§17.1.1, §17.2). |
+| R14 | While the queue is stopped, only a standalone status query (`gutenprint53+usb -s`) can see the printer print the held photo `[code]` P-1. It reconnects to the printer each time and twice per print hung ~17 s (`libusb error -7`) at a layer change; layer names around a hang were wrong. A query on the USB device while a CUPS backend prints could disturb the print. | Use only *printing → Idle* from it, never layer names; query only while the queue is disabled, never during `cupsenable`; decision on its use under OD1. `proposed` |
 
 ### 4.2 Assumptions
 
@@ -176,6 +177,7 @@ Dependencies point downward only. The ESP32 firmware (§11, §12) is listed unde
 - A2 Only one printer (`selphy`) is used. (assumed)
 - A3 The booth host's clock is the time reference for all timeouts. (assumed)
 - A4 After a printer error the printer has already received the job; fixing the problem and pressing the printer's own print button prints that photo. There is no way to clear a stuck printer without printing it. `[user]` (assumed — B-Q4)
+  **P-1 (§17.3.1) `[code]`:** for an empty paper tray and a missing ink cassette the printer had the job, and it printed the held photo **by itself** as soon as the cause was fixed (it senses the tray and the cassette); no button press. Jam: not yet tested. FR-7.7 and the Appendix B staff hints need revising once the jam case is known.
 - A5 Only one job is ever inside the printer at a time, because the booth sends the next copy only after the previous one is out (FR-5.11). `[derived]`
 - A6 The fast-return behaviour read in the Gutenprint master source matches the installed 5.3.4. `[code]` confirmed in P-1 (§17.3.1): fast return on → backend exits when printing starts; `FAST_RETURN=0` → backend stays until "Print complete".
 - A8 The sheet comes out at the back and at the front during each pass and fully retracts at both sides in between; only the final eject leaves it lying on the output tray. `[user]` (pattern and timing — B-Q7)
@@ -190,7 +192,7 @@ Dependencies point downward only. The ESP32 firmware (§11, §12) is listed unde
 
 | ID | Decision | Gates | Proposal |
 |---|---|---|---|
-| OD1 | ESP32 unit drops out (no liveness), or the front sensor reports a fault: block new prints, or continue on CUPS status alone? Without the front sensor the output state is unknown: skip the wait for removal (FR-5.16), or ask the operator on the phone? | FR-10.3, FR-6.1, FR-5.16 | Decide after B-Q1 (is CUPS *completed* with `FAST_RETURN=0` close to the real eject?). P-1 (one print): *completed* ~1–3 s after the eject, and CUPS reports each stage (Feeding Paper, Printing YELLOW/MAGENTA/CYAN/LAMINATE, Print complete), so stages could come from CUPS while the unit is offline; the output state (FR-5.16) still cannot. New option since v0.4: the operator web UI keeps working without the unit, so printing could continue with the operator confirming each eject on the phone. |
+| OD1 | ESP32 unit drops out (no liveness), or the front sensor reports a fault: block new prints, or continue on CUPS status alone? Without the front sensor the output state is unknown: skip the wait for removal (FR-5.16), or ask the operator on the phone? | FR-10.3, FR-6.1, FR-5.16 | Decide after B-Q1 (is CUPS *completed* with `FAST_RETURN=0` close to the real eject?). P-1 (one print): *completed* ~1–3 s after the eject, and CUPS reports each stage (Feeding Paper, Printing YELLOW/MAGENTA/CYAN/LAMINATE, Print complete), so stages could come from CUPS while the unit is offline; the output state (FR-5.16) still cannot. P-1 error runs: while the queue is stopped, a standalone printer status query sees the printer print the held photo (*Feeding Paper → Printing → Idle*) although CUPS still shows the job pending, so reconciliation (FR-6.4) could work without the unit (R14). What only the unit still gives: output occupied/cleared (FR-5.16) and the panel (§12). New option since v0.4: the operator web UI keeps working without the unit, so printing could continue with the operator confirming each eject on the phone. |
 | OD2 | IR events with no job in progress, a front eject before `LAYER_4` (something placed on the tray, or a misread — front protrusions during passes are normal, A8), a 5th rear pass: how shown? | FR-10.5, §5.2 | Log; show as sensor information on the web UI (and panel, FR-12.8); no state change. `proposed` |
 | OD3 | Paper tray capacity and prints per ink cassette (defaults offered on the phone; the operator can always enter the real number) | FR-8.3 | paper-ink-counter.md says ~18 sheets and 56 prints; unconfirmed |
 | OD4 | Booth page reload during a print (e.g. session reload): what does the screen show? | FR-7.12 | The print screen is restored from the tracker's state. `proposed` |
@@ -378,7 +380,7 @@ Decides whether the booth accepts a new print request. There is no print queue: 
 | FR-7.5 | Must | For a known CUPS error (Appendix B) the screen shall show its German cause. `[user]` | approved |
 | FR-7.13 | Must | For a known CUPS error the screen shall show the staff hint from Appendix B. `[user]` | approved |
 | FR-7.6 | Must | For an unrecognised CUPS error the screen shall show "Druckerproblem – bitte Personal rufen" large, and the exact CUPS message small underneath. `[user]` | approved |
-| FR-7.7 | Must | Staff hints for printer errors shall say: fix the printer, press the printer's own print button, then confirm on the phone or the panel inside the booth. `[user]` A4 | approved |
+| FR-7.7 | Must | Staff hints for printer errors shall say: fix the printer, press the printer's own print button, then confirm on the phone or the panel inside the booth. `[user]` A4 — to be revised: P-1 shows the printer resumes by itself after paper/ink errors (A4) | approved (under review) |
 | FR-7.10 | Must | With N > 1 copies the screen shall show "Kopie k von N". `[derived]` FR-5.11 | approved |
 | FR-7.11 | Must | IR-barrier information (jam, misread) shall be shown as information, visually distinct from a printer error. `[user]` | approved |
 | FR-7.8 | Must | With the ESP32 unit offline, the print screen shall show a small staff notice "Sensor offline". `[user]` | approved |
@@ -454,7 +456,7 @@ Tracks how much paper is left in the tray and how many prints are left on the in
 
 Delivers, for the `selphy` queue: whether a job was accepted, each job's state (pending / processing / completed / cancelled / aborted), whether the queue is stopped, and the printer's state and error message.
 
-**Observed source data** `[code]` (P-1, §17.3.1; job 28 from the 2026-11-22 event): with `FAST_RETURN=0` the backend reports the printer state about once a second as `printer-state-message` and `job-printer-state-message`: `Waiting for printer idle`, `Waiting for printer acknowledgement`, `Printer state: Feeding Paper`, `Printer state: Printing YELLOW` / `MAGENTA` / `CYAN` / `LAMINATE`, `Print complete (0 copies remaining)`. Errors appear as `Printer error: <text>`, e.g. `Printer error: Paper Feed (02)`, and stay in `job-printer-state-message` after the job ends. IPP `Get-Job-Attributes` keeps completed / cancelled / aborted apart (FR-9.3).
+**Observed source data** `[code]` (P-1, §17.3.1; job 28 from the 2026-11-22 event): with `FAST_RETURN=0` the backend reports the printer state about once a second as `printer-state-message` and `job-printer-state-message`: `Waiting for printer idle`, `Waiting for printer acknowledgement`, `Printer state: Feeding Paper`, `Printer state: Printing YELLOW` / `MAGENTA` / `CYAN` / `LAMINATE`, `Print complete (0 copies remaining)`. Errors appear as `Printer error: <text>`, e.g. `Printer error: Paper Feed (02)`, and stay in `job-printer-state-message` after the job ends. IPP `Get-Job-Attributes` keeps completed / cancelled / aborted apart (FR-9.3). Errors seen in P-1: `Paper Feed (02)` (empty tray inserted), `No Paper (03)` (tray removed), `No Ink (07)` (cassette removed); each stopped the queue with the job pending (FR-9.6), `printer-state-reasons` was `media-empty,paused` for all three, so only the message text tells them apart.
 
 | ID | Pri | Requirement | Status |
 |---|---|---|---|
@@ -787,7 +789,7 @@ Run once, when the ESP32 unit with IR barriers is built, so timings are measured
 
 **Exit:** B-Q1…B-Q5 and B-Q7 answered (B-Q6 if seen); Appendix A filled; results added to this FSD's lifecycle (Appendix D, `related_test_baseline`).
 
-#### 17.3.1 Pre-bench run P-1 — 2026-11-26, one print, no ESP32 unit
+#### 17.3.1 Pre-bench runs P-1 — 2026-11-26, no ESP32 unit
 
 A rehearsal of the B-1 logger before the unit exists. It does not replace B-1, and its numbers are single samples. `[code]`
 
@@ -824,7 +826,25 @@ A rehearsal of the B-1 logger before the unit exists. It does not replace B-1, a
 - **§9 / `T_cups_poll`:** each backend message reached the poll within ~1.5 s at a ~1.2 s poll interval. The error path (FR-9.2, FR-9.6) was not exercised.
 - **Config:** `SetEnv` belongs in `cups-files.conf` on CUPS 2.4 (§4.3). Check every bench run for `FAST_RETURN=0` in the backend's `envp` lines.
 
-Raw logs stay on the laptop (`~/poll-test-20261126-172543`, `~/poll-test-20261126-173429`); the printer serial is redacted in the copied `error_log`.
+**Error prints** (B-1 prints 3–4 rehearsed; all with `FAST_RETURN=0`, checked in each run's `envp`). After the error the CUPS poll was stopped and a second mode of the script, `printer-poll`, asked the printer itself about once a second (`BACKEND=canonselphyneo gutenprint53+usb -s`, root, only while the queue is disabled). A `watch` mode polls CUPS again without sending, for the duplicate check.
+
+| Job | Provoked | CUPS error (send → error) | After fixing the cause | CUPS afterwards |
+|---|---|---|---|---|
+| 120 | empty paper tray inserted | `Printer error: Paper Feed (02)` after 14.5 s of "Feeding Paper"; seen by the poll 1.6 s later | printer printed the held photo **by itself** when the filled tray went in; photo out ~54 s later | job **pending**, queue stopped: CUPS did not see the print |
+| 120 (duplicate check) | tray removed, then `cupsenable selphy` | job 120 *processing* again → `Printer error: No Paper (03)` after 5 s, queue stopped | — | **duplicate confirmed**: the already printed photo was sent again |
+| 121 | empty paper tray inserted (rerun with `printer-poll`) | `Paper Feed (02)` after 14 s | printer itself: `Feeding Paper` + `Printer error: Paper Feed` → tray in → `Feeding Paper` (8 s) → `Printing YELLOW` → … → `Idle` after ~55 s; photo fine | job pending |
+| 122 | ink cassette removed | `Printer error: No Ink (07)` after 5 s ("Sending spool data", "Feeding Paper" first) | printer itself: `Feeding Paper` + `No Ink` → cassette in → `Printing YELLOW` 8 s later → … → `Idle` after ~47 s | job pending |
+
+**Preliminary answers:**
+
+- **B-Q3:** the error reaches CUPS and the poll within ~1–2 s; the queue stops and the job stays pending (FR-9.2, FR-9.6). `printer-state-reasons` is `media-empty,paused` for paper and ink alike; only the text differs. An empty tray gives `Paper Feed (02)`, the same text as a misfeed (R1); a missing tray gives `No Paper (03)`.
+- **B-Q4 (paper, ink):** the printer had the job and printed it by itself once the tray or cassette was back; no button (A4). Jam: open.
+- **B-Q5:** yes. `cupsenable` with the job still pending sends it again (R3), even though the photo was already printed.
+- **Printer status query (R14):** shows the held print as *Feeding Paper → Printing … → Idle* while CUPS still reports the job pending. In both runs the query hung twice for ~17 s (`libusb error -7`, `Unable to attach to printer`) at layer changes, and the layer names around the hangs were inconsistent (e.g. LAMINATE for 1 s); *Printing → Idle* was reliable (2 of 2). The photo printed during the queries (job 121) was fine.
+
+**Still open:** B-1 print 5 (provoked jam: an error *during* printing, the case R2 is about), the ink panels used by a jam (B-Q4, A7), B-Q6, B-Q7 (needs the unit).
+
+Raw logs stay on the laptop (`~/poll-test-20261126-*`: 172543, 173429, 175408, 182634, 183252); the printer serial is redacted in the copied `error_log`.
 
 ### 17.4 Acceptance (before the next event)
 
@@ -897,7 +917,7 @@ Raw logs stay on the laptop (`~/poll-test-20261126-172543`, `~/poll-test-2026112
 | `T_output_wait` | `WAIT_OUTPUT` longer than this → notice on the phone | TBD (proposed: 30 s) |
 | `T_confirm` | wait for a front eject after a suspected jam | TBD |
 | `T_alive` | ESP32 unit considered offline after this silence | TBD |
-| `T_cups_poll` | max delay for a CUPS error to reach the tracker | TBD; P-1: state messages seen within ~1.5 s at a ~1.2 s poll (no error tested) |
+| `T_cups_poll` | max delay for a CUPS error to reach the tracker | TBD; P-1: state messages within ~1.5 s, errors (`Paper Feed (02)`, `No Ink (07)`) within ~1.6 s at a ~1.2 s poll |
 | `T_ui` | max delay from event to screen (booth screen and operator web UI), and for print buttons to change state | TBD |
 | `T_resume` | max delay from operator confirmation to queue enabled | TBD |
 | `LOW_THRESHOLD` | supply count at which the low warning starts (not a timing value; FR-8.2) | TBD (proposed: 3) |
@@ -922,7 +942,7 @@ Raw logs stay on the laptop (`~/poll-test-20261126-172543`, `~/poll-test-2026112
 | copies (N > 1) | Kopie k von N |
 | busy rejection (OD5) | Drucker beschäftigt – bitte warten, bis der aktuelle Druck fertig ist |
 
-**Printer errors (from CUPS)** — staff hint for all: fix the problem, press the printer's print button, then confirm on the phone or the panel in the booth (FR-7.7).
+**Printer errors (from CUPS)** — staff hint for all: fix the problem, press the printer's print button, then confirm on the phone or the panel in the booth (FR-7.7). *Under review:* in P-1 the printer printed the held photo by itself after paper and ink errors, without the button (A4); "Drucktaste am Drucker drücken" would be wrong there and is kept only until the jam case is tested.
 
 | Trigger | Guest text | Staff hint |
 |---|---|---|
@@ -930,6 +950,8 @@ Raw logs stay on the laptop (`~/poll-test-20261126-172543`, `~/poll-test-2026112
 | `Paper Feed (02)`, paper left > 0 | Papiereinzug gestört | Papier prüfen und neu einlegen, Drucktaste am Drucker drücken, dann am Handy oder im Bedienfeld bestätigen. |
 | `Paper Feed (02)`, count unknown `[code]` | Papier leer oder Papiereinzug gestört | Papier prüfen/auffüllen, Drucktaste am Drucker drücken, dann am Handy oder im Bedienfeld bestätigen. |
 | `Ink Cassette Empty (06)` `[code]` | Farbkassette leer | Farbkassette tauschen, Drucktaste am Drucker drücken, dann am Handy oder im Bedienfeld bestätigen. |
+| `No Paper (03)` `[code]` P-1: paper tray removed | Papierkassette fehlt | Papierkassette einsetzen, dann am Handy oder im Bedienfeld bestätigen. *(proposed; hint per A4)* |
+| `No Ink (07)` `[code]` P-1: ink cassette removed | Farbkassette fehlt | Farbkassette einsetzen, dann am Handy oder im Bedienfeld bestätigen. *(proposed; hint per A4)* |
 | `No Paper and Ink (09)` `[code]` | Papier- oder Farbkassette fehlt | Beide Kassetten prüfen, Drucktaste am Drucker drücken, dann am Handy oder im Bedienfeld bestätigen. |
 | `Paper jam (0b)` `[code]` | Papierstau | Papier vorsichtig entfernen, Drucktaste am Drucker drücken, dann am Handy oder im Bedienfeld bestätigen. |
 | printer not connected / not found (assumed) | Drucker nicht verbunden | USB-Kabel und Strom prüfen. |
@@ -979,7 +1001,7 @@ Raw logs stay on the laptop (`~/poll-test-20261126-172543`, `~/poll-test-2026112
 
 ```yaml
 document_status: draft
-fsd_version: 0.13
+fsd_version: 0.14
 repository: starkerflamingo32/photobooth (branch booth)
 baseline_commit: e8c2cbd3
 applicable_firmware_version: none yet (ESP32 unit not built; board ESP32-C6 mini)
@@ -1030,6 +1052,10 @@ change_history:
       ~58 s); FAST_RETURN=0 keeps the backend attached (completed ~2.6 s after the eject), 1 of 5 clean prints for R7;
       SetEnv must be in cups-files.conf (§4.3, NFR-13.2); A6 confirmed; CUPS stage messages recorded (§9.1, OD1);
       preliminary pass timings in Appendix A
+  - 2026-11-26 v0.14: P-1 error runs (§17.3.1): empty tray → Paper Feed (02), tray removed → No Paper (03),
+      cassette removed → No Ink (07); printer prints the held photo by itself after the fix (A4 contradicted for
+      paper/ink; FR-7.7 and Appendix B hints under review); duplicate on cupsenable confirmed (R3, B-Q5); standalone
+      printer status query sees the held print while CUPS is blind, with ~17 s hangs (R14, OD1); jam still open
 superseded_requirements:
   - FR-11.18 v0.10 (digital OUT / analog cross-check) — removed; broken wire caught by a pull-down and FR-11.12
   - FR-11.9 v0.9 (Must: LED-off/LED-on subtraction for both sensors) — May, rear only; HW-201 LEDs are always on (FR-11.17)
@@ -1050,7 +1076,7 @@ superseded_requirements:
   - NFR-12.2 (some mechanism re-enables the queue) — booth reconciliation (FR-6.4, FR-6.11)
   - FR-13.x → FR-14.x (renumbered with the new §12)
 open_decisions: see §4.4 (OD1–OD6, OD8), each naming the requirement it gates
-related_test_baseline: P-1 2026-11-26 (pre-bench, one print per mode, §17.3.1); B-1 and §17.5 not run
+related_test_baseline: P-1 2026-11-26 (pre-bench: 2 normal prints, paper and ink errors, §17.3.1; jam open); B-1 and §17.5 not run
 ```
 
 ## Related
