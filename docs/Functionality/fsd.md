@@ -8,7 +8,7 @@
 |---|---|
 | Created | 2026-11-23 |
 | Last updated | 2026-11-27 |
-| Load defined | **No** — bench session B-1 not run (§17.3; pre-bench runs P-1 done: 2 normal prints, paper, ink and ink-sheet errors, §17.3.1; B-Q1–B-Q5 answered for one sample each), print-limit characterisation not run (§17.5), timing parameters open (Appendix A), open decisions OD3–OD6 (§4.4; OD13 is a planned decision point after the first event, §17.6, and does not block "defined"), Method/UserDocumentation planes not created yet |
+| Load defined | **No** — bench session B-1 not run (§17.3; pre-bench runs P-1 done: 2 normal prints, paper, ink and ink-sheet errors, §17.3.1; B-Q1–B-Q5 answered for one sample each), print-limit characterisation not run (§17.5), timing parameters open (Appendix A), open decision OD6 (§4.4, needs B-Q6; OD13 is a planned decision point after the first event, §17.6, and does not block "defined"), Method/UserDocumentation planes not created yet |
 
 Full lifecycle metadata: Appendix D.
 
@@ -199,13 +199,12 @@ R4 (IR misreads) and R6 (ESP32 on the shared USB hub) were removed with the ESP3
 
 | ID | Decision | Gates | Proposal |
 |---|---|---|---|
-| OD3 | Paper tray capacity and prints per ink cassette (defaults offered on the phone; the operator can always enter the real number) | FR-8.3 | paper-ink-counter.md says ~18 sheets and 56 prints; unconfirmed |
-| OD4 | Booth page reload during a print (e.g. session reload): what does the screen show? | FR-7.12 | The print screen is restored from the tracker's state. `proposed` |
-| OD5 | Guest presses a print button while busy: what is shown? | FR-6.10 | Short notice "Drucker beschäftigt – bitte warten, bis der aktuelle Druck fertig ist". `proposed` |
 | OD6 | Job cancelled by the backend (status `0x0A`): resend the copy, or treat as failed? And after a cancelled print, does the booth go to the start screen (like FR-7.15) or back to the result view? | §5.2 (`CANCELLED`), FR-7.15 | Decide after B-Q6 has shown what `0x0A` means |
 | OD13 *(planned decision point)* | May the booth reconcile **by itself** from the printer status query (*printing → Idle* after the error = photo printed → like "Foto ist da"; *Idle* after a power cycle without printing = lost → like "Foto fehlt"), or is the query only evidence for the operator's decision? | FR-6.4, FR-5.14, FR-9.8 | **Until E-1 is evaluated:** evidence only; the operator decides. **After E-1 (§17.6), if the query never gave a wrong *printed* or *nothing printed* in a clean run — middle option:** the booth decides by itself only on clean evidence and asks the operator otherwise: (a) *printing* seen, then *Idle*, with no *no answer* period in between → applied as "Foto ist da"; (b) *Idle* after a power cycle (printer unreachable, then back), *printing* never seen, no *no answer* period since the error → applied as "Foto fehlt"; (c) anything else (a hang or *no answer* in the window, the error still active, *printing* without *Idle*, an unknown state, a booth restart, FR-5.13) → operator decides as now. An automatic decision goes through the same reconciliation (FR-6.4), counts as the first decision (FR-12b.18), is logged with source *printer query* (FR-14.1), and is shown on the phone with its reason ("Automatisch entschieden: Foto ist da – Drucker hat gedruckt (14:32:05)"). If E-1 shows a wrong clean result even once, the operator keeps deciding in every case. (P-1: 2 of 2 correct, with ~17 s hangs, R14.) `proposed` |
 
 OD1 (ESP32 unit offline), OD2 (IR events without a job) and OD8 (panel while the booth is unreachable) were removed with the ESP32 unit in v0.16. **OD13 is a planned decision point, not an open gap** `[user]`: the FSD is complete with its current behaviour (printer query as evidence only, operator decides), which stays in force until E-1 (§17.6, Phase 5) decides it. It does not block "Load defined"; deciding it later is a change to this FSD.
+
+Decided in v0.21: OD3 (defaults 18 sheets / 56 prints, FR-8.3), OD4 (print screen restored after a reload, FR-7.12), OD5 (busy notice, FR-6.10). `[user]`
 
 Decided in v0.17: OD11 (a photo left on the tray does no harm; take-photo message for {{T_take_hint}}, FR-7.19) and OD12 (fallback is the printer status page on the booth laptop, FR-12b.20). `[user]`
 
@@ -366,10 +365,10 @@ Decides whether the booth accepts a new print request. There is no print queue: 
 | ID | Pri | Requirement | Status |
 |---|---|---|---|
 | FR-6.1 | Must | While a print request is unfinished (its last copy not `DONE` or `CANCELLED`), the booth shall reject new print requests. `[user]` | approved |
-| FR-6.12 | Must | While a CUPS printer error or `AWAIT_OPERATOR` is active, or a supply count is 0 (FR-8.4), the booth shall reject new print requests. `[user]` | approved |
+| FR-6.12 | Must | While a CUPS printer error or `AWAIT_OPERATOR` is active, the booth shall reject new print requests. A supply count of 0 does not reject (FR-8.4). `[user]` | approved |
 | FR-6.8 | Must | The rejection shall be enforced on the server for every print entry point (result screen, gallery, any API call), regardless of when the page was loaded. `[user]` | approved |
 | FR-6.9 | Must | Print buttons on pages already open (result screen, gallery) shall show as disabled within {{T_ui}} of the booth becoming busy, and enabled again within {{T_ui}} of it becoming free. `[user]` | approved (value open) |
-| FR-6.10 | Must | A rejected request shall create no CUPS job and shall show the guest the busy notice (OD5). `[user]` | approved (wording open) |
+| FR-6.10 | Must | A rejected request shall create no CUPS job and shall briefly show the guest the busy notice "Drucker beschäftigt – bitte warten, bis der aktuelle Druck fertig ist" (Appendix B). `[user]` OD5 | approved |
 | FR-6.2 | Must | While printing is blocked by a CUPS printer error and no print request is unfinished, taking photos, showing the result and the QR code shall keep working. `[user]` (While a request is unfinished the print screen stays up, FR-7.14.) | approved |
 | FR-6.4 | Must | On an operator decision for a job in `ERROR` or `AWAIT_OPERATOR`, the booth shall first stop any printer status query, then make CUPS match the decision ("Foto ist da": cancel the job if still pending; "Foto fehlt": keep it), then re-enable the queue. `[user]` (Automatic decisions from the query: OD13.) | approved |
 | FR-6.11 | Must | Only the booth's reconciliation (FR-6.4) shall re-enable the CUPS queue; no other automatic `cupsenable` shall run. `[derived]` R3 | approved |
@@ -406,7 +405,7 @@ Decides whether the booth accepts a new print request. There is no print queue: 
 | FR-7.6 | Must | For an unrecognised CUPS error the screen shall show "Druckerproblem – bitte Personal rufen" large, and the exact CUPS message small underneath. `[user]` | approved |
 | FR-7.7 | Must | Each printer error in Appendix B shall have its own staff hint, telling the operator how to fix that error and to confirm on the phone whether the photo came out; for errors after which the printer prints the held photo by itself (A4), the hint says so and names the print button only as a fallback. `[user]` A4 (v0.19, replaces the single "press the print button" rule) | approved |
 | FR-7.10 | Must | With N > 1 copies the screen shall show "Kopie k von N". `[derived]` FR-5.11 | approved |
-| FR-7.12 | Should | After a page reload during a print, the print screen shall show the request's current stage again. | proposed (OD4) |
+| FR-7.12 | Should | After a page reload or browser restart during a print, the booth shall show the print screen again with the request's current stage, rebuilt from the tracker's state. `[user]` OD4 | approved |
 | FR-7.9 | Should | Exact German wording per Appendix B. | proposed |
 
 | ID | Precondition · stimulus | Expected observation | Must NOT happen | Tier |
@@ -431,7 +430,7 @@ Decides whether the booth accepts a new print request. There is no print queue: 
 
 Tracks how much paper is left in the tray and how many prints are left on the ink cassette, so the operator refills before a guest's print fails, and so `Paper Feed (02)` can be told apart as empty tray or misfeed (R1). Part of the custom print stack; replaces upstream's print limit for this booth. `[user]`
 
-**No fixed print limit.** The booth is not rented out and has no print budget per event, so there is no "N prints, then stop" cap: upstream's print limit stays off and none is built. `[user]` Reasons: upstream counts at CUPS acceptance, not at paper out; its lock/unlock does not match refilling paper; and it left the booth locked at the 2026-11-22 event (`Print locked`, then `Unable to print 1 copies` after unlocking; likely the threshold bug fixed upstream in #1667, to be confirmed by §17.5). Earlier sketch: photobooth-setup `paper-ink-counter.md`; capacities OD3.
+**No fixed print limit.** The booth is not rented out and has no print budget per event, so there is no "N prints, then stop" cap: upstream's print limit stays off and none is built. `[user]` Reasons: upstream counts at CUPS acceptance, not at paper out; its lock/unlock does not match refilling paper; and it left the booth locked at the 2026-11-22 event (`Print locked`, then `Unable to print 1 copies` after unlocking; likely the threshold bug fixed upstream in #1667, to be confirmed by §17.5). Earlier sketch: photobooth-setup `paper-ink-counter.md`; defaults 18 sheets / 56 prints (FR-8.3).
 
 ### 8.2 Requirements
 
@@ -439,8 +438,8 @@ Tracks how much paper is left in the tray and how many prints are left on the in
 |---|---|---|---|
 | FR-8.1 | Must | The booth shall keep two counts, *paper left* and *prints left on the ink cassette*, and lower both by one when a copy reaches `DONE` (`Print complete` or "Foto ist da"). Apart from FR-8.10 and operator corrections (FR-8.3), no other event shall lower them. `[user]` | approved |
 | FR-8.2 | Must | When either count reaches {{LOW_THRESHOLD}}, the operator web UI and the print screen (as a staff notice) shall show a warning ("Papier fast leer – noch n Blatt" / "Farbkassette fast leer – noch n Drucke"). `[user]` | approved (value open) |
-| FR-8.3 | Must | On the operator web UI the operator shall be able to: set *paper left* after refilling by entering the number of sheets now in the tray; set *prints left* after changing the cassette (default from OD3); and correct either count at any time. Each change is logged (FR-14.1). `[user]` | approved |
-| FR-8.4 | Must | While *paper left* or *prints left* is 0, new print requests shall be rejected as in FR-6.12, with the guest notice "Drucker wird nachgefüllt – bitte Personal rufen", and the operator web UI shall show what to refill. A request already running is not cancelled: its next copy waits, with the print screen showing the refill notice, until the operator has set the count above 0. | proposed |
+| FR-8.3 | Must | On the operator web UI the operator shall be able to: set *paper left* after refilling by entering the number of sheets now in the tray; set *prints left* after changing the cassette (defaults offered: 18 sheets per paper tray, 56 prints per ink cassette `[user]` OD3, from photobooth-setup `paper-ink-counter.md`; the operator can always enter the real number); and correct either count at any time. Each change is logged (FR-14.1). `[user]` | approved |
+| FR-8.4 | Must | When *paper left* or *prints left* reaches 0, the operator web UI shall show a refill warning and the print screen a staff notice ("Papier laut Zähler leer" / "Farbkassette laut Zähler leer"); printing shall **not** be blocked: if the tray or cassette is really empty, the printer's own error stops the print (Appendix B). Counts shall not go below 0. `[user]` | approved |
 | FR-8.5 | Must | The counts shall survive a booth restart and a page reload unchanged. `[derived]` | approved |
 | FR-8.6 | Must | On `Paper Feed (02)`, the booth shall show "Papier leer" when *paper left* is 0 and "Papiereinzug gestört" when it is greater than 0 (Appendix B); with an unknown count, the combined text. `[derived]` R1 | approved |
 | FR-8.7 | Must | While a count is unknown (never set since installation), it shall be shown as "unbekannt", with no warning and no block. `[derived]` | approved |
@@ -454,8 +453,8 @@ Tracks how much paper is left in the tray and how many prints are left on the in
 | FR-8.1 | Paper 10 · print stops with `Paper Feed (02)`, operator "Foto fehlt", resent, `DONE` | paper 9 | paper 8 | integration |
 | FR-8.2 | LOW_THRESHOLD 3, paper 4 · one print | warning on phone and print screen | no warning; guest-style error | e2e |
 | FR-8.3 | Phone · "Papier nachgefüllt: 18" | paper 18, change logged | count unchanged; not logged | e2e |
-| FR-8.4 | Paper 0 · guest presses Drucken | refill notice, no CUPS job | CUPS job created | e2e |
-| FR-8.4 | Paper 1, 2 copies requested | copy 1 printed, copy 2 waits blocked until refill; operator sets 18 · copy 2 printed | copy 2 sent with paper 0; copy 2 lost | integration |
+| FR-8.4 | Paper 0 · guest presses Drucken | print sent; refill warning on the phone, staff notice on the print screen | print refused; count −1 | e2e |
+| FR-8.4 | Paper 1, 2 copies requested, 3 sheets really in the tray | both copies printed; paper 0 after copy 1, stays 0 | copy 2 held back; count negative | integration |
 | FR-8.5 | Paper 7 · restart booth | paper 7 | reset to 0 or unknown | integration |
 | FR-8.6 | Paper 0 / paper 5 · `Paper Feed (02)` | "Papier leer" / "Papiereinzug gestört" | combined text with a known count | unit |
 | FR-8.7 | Fresh install · print | prints; counts "unbekannt" | blocked | integration |
@@ -766,7 +765,7 @@ Raw logs stay on the laptop (`~/poll-test-20261126-*`: 172543, 173429, 175408, 1
 5. Printer USB cable unplugged mid-print: "Drucker nicht verbunden" shown; after plugging back in, the operator decides and exactly one photo per copy results.
 6. Booth router switched off mid-print: the print completes and the print screen shows every stage (NFR-13.3); a following error is resolved on the booth laptop (FR-12b.20).
 7. Two phones decide the same error within a few seconds: only the first decision is applied, no duplicate (FR-12b.18).
-8. Paper counter: load 3 sheets and enter 3 on the phone; print 3 photos — low warning shown, then the 4th request is refused with the refill notice; refill, enter 18, printing continues; empty the tray with the count at 5 → "Papiereinzug gestört" shown, as expected for a wrong count (FR-8.6).
+8. Paper counter: load 3 sheets and enter 3 on the phone; print 3 photos — low warning shown, count 0 → refill warning on the phone, the 4th request still prints and stops with "Papier leer" (FR-8.6); refill, enter 18, the printer prints the held photo, operator confirms; empty the tray with the count at 5 → "Papiereinzug gestört" shown, as expected for a wrong count (FR-8.6).
 9. `FAST_RETURN` line removed from `cups-files.conf`, CUPS restarted: warning on the phone (NFR-13.4); a print goes to `AWAIT_OPERATOR`, never "Fertig" early (FR-5.4). Restore the line afterwards.
 
 ### 17.5 Upstream characterisation (print limit, auto-print, rate limit)
@@ -859,7 +858,7 @@ Removed in v0.16 with the ESP32 unit: `T_sent_to_pass1`, `T_pass`, `T_eject` (re
 | `AWAIT_OPERATOR` | Druck wird geprüft – bitte Personal rufen |
 | `CANCELLED` | Druck abgebrochen |
 | copies (N > 1) | Kopie k von N |
-| busy rejection (OD5) | Drucker beschäftigt – bitte warten, bis der aktuelle Druck fertig ist |
+| busy rejection (FR-6.10) | Drucker beschäftigt – bitte warten, bis der aktuelle Druck fertig ist |
 
 **Printer errors (from CUPS)** — one staff hint per error (FR-7.7) `[user]` v0.19. Basis: P-1 (A4) — after paper and ink errors the printer prints the held photo by itself once the cause is fixed; after an ink-sheet error it needs a power cycle and the photo is lost. Hints marked *to be checked* are for errors not yet seen on the real printer and are corrected when first seen (B-1 or an event).
 
@@ -884,7 +883,7 @@ Removed in v0.16 with the ESP32 unit: `T_sent_to_pass1`, `T_pass`, `T_eject` (re
 | Tracker | stall (FR-5.5) | Drucker reagiert nicht – bitte Personal rufen |
 | Tracker | completed before `LAYER_4` (FR-5.4) | Druckstatus unklar – bitte Personal rufen |
 | Counter | low (FR-8.2) | Papier fast leer – noch n Blatt / Farbkassette fast leer – noch n Drucke *(staff notice)* |
-| Counter | zero, request refused (FR-8.4) | Drucker wird nachgefüllt – bitte Personal rufen |
+| Counter | zero (FR-8.4) | Papier laut Zähler leer / Farbkassette laut Zähler leer – bitte nachfüllen *(staff notice; printing continues)* |
 
 ## Appendix C — Operator texts (German; wording `proposed`)
 
@@ -910,7 +909,7 @@ The panel texts (old Appendix C, first table) were removed with the panel in v0.
 
 ```yaml
 document_status: draft
-fsd_version: 0.20
+fsd_version: 0.21
 repository: starkerflamingo32/photobooth (branch booth)
 baseline_commit: e8c2cbd3
 applicable_firmware_version: n/a (no ESP32 unit since v0.16)
@@ -990,7 +989,12 @@ change_history:
   - 2026-11-27 v0.20: review block 2 — FR-7.7 per-error staff hints approved; Appendix B hints rewritten: paper/ink
       errors "printer prints by itself" with the print button as fallback after a minute; 06 and 0b to be checked;
       0b follows the printer display (power cycle), no "remove paper" step
+  - 2026-11-27 v0.21: review block 3 — OD3 (defaults 18 sheets / 56 prints), OD4 (restore print screen, FR-7.12),
+      OD5 (busy notice, FR-6.10) decided; FR-8.4 changed to warn only: a count of 0 no longer blocks printing
+      (FR-6.12 narrowed)
 superseded_requirements:
+  # v0.21
+  - FR-8.4 v0.20 (count 0 blocks new prints and holds the next copy) — warning only (FR-8.4 v0.21)
   # v0.20
   - FR-7.7 v0.16 (one rule: press the print button, confirm on the phone) — per-error hints (FR-7.7 v0.20)
   # v0.17
@@ -1040,7 +1044,7 @@ superseded_requirements:
   - FR-10.3 v0.1, FR-10.4 (CUPS-only fallback stages) — replaced by OD1
   - NFR-12.2 (some mechanism re-enables the queue) — booth reconciliation (FR-6.4, FR-6.11)
   - FR-13.x → FR-14.x (renumbered with the new §12)
-open_decisions: see §4.4 (OD3–OD6), each naming the requirement it gates; OD13 is a planned decision point after the first event (E-1), not a blocker
+open_decisions: see §4.4 (OD6), each naming the requirement it gates; OD13 is a planned decision point after the first event (E-1), not a blocker
 related_test_baseline: P-1 2026-11-26 (pre-bench: 2 normal prints, paper, ink and ink-sheet errors, resend, §17.3.1); B-1, E-1 and §17.5 not run
 ```
 
