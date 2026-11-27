@@ -8,7 +8,7 @@
 |---|---|
 | Created | 2026-11-23 |
 | Last updated | 2026-11-27 |
-| Load defined | **No** — all requirements approved and all owner decisions made (review 2026-11-27, v0.19–v0.24). Still missing: bench session B-1 (§17.3; P-1 done, B-Q1–B-Q5 answered for one sample each), which also decides OD6 and fills the measured timing values (Appendix A: stall limits, `T_cups_poll`); print-limit characterisation (§17.5, needs Phase 1); Method/UserDocumentation planes not created yet. OD13 is a planned decision point after the first event (§17.6) and does not block "defined". |
+| Load defined | **No** — all requirements approved and all owner decisions made (review 2026-11-27, v0.19–v0.24). Still missing: bench session B-1 (§17.3; P-1 done, B-Q1–B-Q5 answered for one sample each), which fills the measured timing values (Appendix A: stall limits, `T_cups_poll`); print-limit characterisation (§17.5, needs Phase 1); Method/UserDocumentation planes not created yet. OD13 is a planned decision point after the first event (§17.6) and does not block "defined". |
 
 Full lifecycle metadata: Appendix D.
 
@@ -105,7 +105,7 @@ The phone is the operator's main interface; the same page on the booth laptop is
 |---|---|---|
 | Printer | Canon SELPHY CP1300, USB `04a9:32db`, dye-sublimation, 4 passes per print (Y, M, C, overcoat); paper leaves the **back** of the printer between passes and exits the **front** when finished | `[code]` / `[derived]` |
 | Driver | CUPS queue `selphy`, device `gutenprint53+usb://canon-cp1300/…`, `gutenprint.5.3://canon-cp1300`, `PageSize=Postcard`, `StpBorderless=True` | `[code]` photobooth-setup, laptop |
-| Backend | Gutenprint 5.3.4 (Debian 12) `backend_canonselphyneo`: under CUPS *fast return* is on unless `FAST_RETURN` is set; on most printer errors it stops the queue and leaves the job pending (`CUPS_BACKEND_STOP`), on status `0x0A` it cancels the job (`CUPS_BACKEND_CANCEL`). With `FAST_RETURN=0` it reports the printer state about once a second (§9.1). Run standalone (`BACKEND=canonselphyneo gutenprint53+usb -s`, as root) it queries the printer's status | `[code]` Gutenprint source (master; same switch in the installed binary); P-1 |
+| Backend | Gutenprint 5.3.4 (Debian 12) `backend_canonselphyneo`: under CUPS *fast return* is on unless `FAST_RETURN` is set; on most printer errors it stops the queue and leaves the job pending (`CUPS_BACKEND_STOP`), on status `0x0A` ("Incorrect media for job", job and loaded media do not match) it cancels the job (`CUPS_BACKEND_CANCEL`) and the queue keeps running. With `FAST_RETURN=0` it reports the printer state about once a second (§9.1). Run standalone (`BACKEND=canonselphyneo gutenprint53+usb -s`, as root) it queries the printer's status | `[code]` Gutenprint source (master; same switch in the installed binary); P-1 |
 | Booth host | Acer Switch 3, Debian 12, native Photobooth install | `[code]` |
 | Paper path | During each pass the sheet comes out at the back, then at the front, and goes fully back inside at both sides; the finished print is ejected at the front onto the output tray | `[user]` |
 | Shared USB hub | Printer and camera share one USB hub on the laptop | `[code]` |
@@ -147,7 +147,7 @@ Dependencies point downward only. §10–§12 (unit interface, ESP32 sensor unit
 |---|---|---|---|
 | **1 — Virtual test setup** | §17.1: simulated SELPHY backend that emits the backend's stage messages, can inject SELPHY errors and pending/stopped-queue states, and answers printer status queries; browser test setup (§17.1.1); workflows (§17.2) | Every unit, integration and e2e test in this FSD can be run without hardware, in GitHub Actions; §17.5 run against upstream | — |
 | **2 — Booth logic + operator web UI + supply counters** | §5, §6, §7, §8, §9, §12b against the virtual test setup | All unit and integration tests pass; exactly-once contracts (§5.4) pass in simulation, with decisions made on the web UI | Phase 1 |
-| **3 — Bench session** | Bench session B-1 (§17.3) on the real SELPHY | B-1 run; B-Q1…B-Q6 answered; Appendix A filled; OD6 decided | Phase 2 |
+| **3 — Bench session** | Bench session B-1 (§17.3) on the real SELPHY | B-1 run; B-Q1…B-Q5 answered (B-Q6 if seen); Appendix A filled | Phase 2 |
 | **4 — Acceptance** | §17.4 on the real booth | Acceptance list passes | Phase 3 |
 | **5 — First event** | Event observation E-1 (§17.6): printer query logged next to every operator decision | E-Q1 answered; OD13 decided | Phase 4 |
 
@@ -165,7 +165,7 @@ Dependencies point downward only. §10–§12 (unit interface, ESP32 sensor unit
 | R5 | Stage timing differs per printer/temperature; wrong limits cause false stalls or late detection. | Limits measured in B-1 (Appendix A). |
 | R7 | With `FAST_RETURN=0` the backend polls the printer for the whole print; this might confuse the printer. | Five consecutive prints in B-1 without printer misbehaviour before the setting is kept (B-Q1). P-1: 1 of 5 clean (§17.3.1). |
 | R8 | A page loaded before a print started (result screen, gallery) still shows an active print button. `[user]` | Server-side gate on every print entry point (FR-6.8). |
-| R9 | Backend status `0x0A` cancels the job instead of stopping the queue `[code]`; its meaning on the CP1300 is unknown, and the photo may be lost. | Record in B-1 if it occurs (B-Q6); OD6. |
+| R9 | Backend status `0x0A` cancels the job instead of stopping the queue. It means "Incorrect media for job" (Debian 12 text; upstream: "Incorrect paper tray and ink for job", protocol note "Media/Job mismatch"): the job's print size does not match the loaded paper tray and ink cassette, e.g. a wrong-size cassette after a swap; the booth always prints postcard size. It is only reported while the backend waits for the printer, before printing starts, so nothing should be printed (inferred from the code, not yet observed). `[code]` Gutenprint `backend_canonselphyneo.c`, Debian 12 source package `5.3.4.20220624T01008808d602-1` (backend 0.22) and upstream master (0.24) | Treated as a printer error and the copy resent after the fix (FR-5.18); confirm "nothing printed" when first seen (B-Q6). |
 | R10 | Phone not at hand, battery empty, or booth Wi-Fi down when an error needs a decision. Since v0.16 there is no hardware panel as fallback. | The printer status page on the booth laptop (FR-12b.20); printing itself never depends on Wi-Fi (NFR-13.3). |
 | R11 | The operator web UI adds network exposure: anyone on the booth Wi-Fi could make operator decisions. | WPA2 Wi-Fi joined only by laptop and operator phone; upstream admin login on the web UI (FR-12b.2); §15. |
 | R12 | Two browsers (two staff phones, or two tabs) give conflicting decisions. | First confirmed decision wins; later ones are ignored and every operator page shows the decision made (FR-12b.18). |
@@ -199,10 +199,11 @@ R4 (IR misreads) and R6 (ESP32 on the shared USB hub) were removed with the ESP3
 
 | ID | Decision | Gates | Proposal |
 |---|---|---|---|
-| OD6 | Job cancelled by the backend (status `0x0A`): resend the copy, or treat as failed? And after a cancelled print, does the booth go to the start screen (like FR-7.15) or back to the result view? | §5.2 (`CANCELLED`), FR-7.15 | Decide after B-Q6 has shown what `0x0A` means |
 | OD13 *(planned decision point)* | May the booth reconcile **by itself** from the printer status query (*printing → Idle* after the error = photo printed → like "Foto ist da"; *Idle* after a power cycle without printing = lost → like "Foto fehlt"), or is the query only evidence for the operator's decision? | FR-6.4, FR-5.14, FR-9.8 | **Until E-1 is evaluated:** evidence only; the operator decides. **After E-1 (§17.6), if the query never gave a wrong *printed* or *nothing printed* in a clean run — middle option:** the booth decides by itself only on clean evidence and asks the operator otherwise: (a) *printing* seen, then *Idle*, with no *no answer* period in between → applied as "Foto ist da"; (b) *Idle* after a power cycle (printer unreachable, then back), *printing* never seen, no *no answer* period since the error → applied as "Foto fehlt"; (c) anything else (a hang or *no answer* in the window, the error still active, *printing* without *Idle*, an unknown state, a booth restart, FR-5.13) → operator decides as now. An automatic decision goes through the same reconciliation (FR-6.4), counts as the first decision (FR-12b.18), is logged with source *printer query* (FR-14.1), and is shown on the phone with its reason ("Automatisch entschieden: Foto ist da – Drucker hat gedruckt (14:32:05)"). If E-1 shows a wrong clean result even once, the operator keeps deciding in every case. (P-1: 2 of 2 correct, with ~17 s hangs, R14.) `proposed` |
 
 OD1 (ESP32 unit offline), OD2 (IR events without a job) and OD8 (panel while the booth is unreachable) were removed with the ESP32 unit in v0.16. **OD13 is a planned decision point, not an open gap** `[user]`: the FSD is complete with its current behaviour (printer query as evidence only, operator decides), which stays in force until E-1 (§17.6, Phase 5) decides it. It does not block "Load defined"; deciding it later is a change to this FSD.
+
+Decided in v0.25: OD6 — a backend cancel with `0x0A` is a printer error, not a finished cancel; after the operator's fix the copy is resent as a new job (FR-5.18), so the print screen stays up and the cancelled-print question is moot. `[user]`
 
 Decided in v0.21: OD3 (defaults 18 sheets / 56 prints, FR-8.3), OD4 (print screen restored after a reload, FR-7.12), OD5 (busy notice, FR-6.10). `[user]`
 
@@ -230,7 +231,7 @@ States of the copy currently being printed. The request additionally carries "co
 | `DONE` | last copy: Fertig – bitte Foto entnehmen (for {{T_take_hint}}) | `Print complete` or job *completed* after `LAYER_4`, or operator "Foto ist da" |
 | `ERROR` | CUPS error text | CUPS printer error / queue stopped while this job is active; CUPS refused the job |
 | `AWAIT_OPERATOR` | Druck wird geprüft – bitte Personal rufen | stall (FR-5.5); job *completed* before `LAYER_4` (FR-5.4); booth restart with an unfinished job (FR-5.13) |
-| `CANCELLED` | Druck abgebrochen | job cancelled or aborted in CUPS |
+| `CANCELLED` | Druck abgebrochen | job cancelled or aborted in CUPS, except a backend cancel with `0x0A` (→ `ERROR`, FR-5.18) |
 
 Events: **E1** CUPS accepted · **E2** CUPS refused · **E3** backend stage message (`Feeding Paper`, `Printing YELLOW/MAGENTA/CYAN/LAMINATE`) · **E4** backend `Print complete` or CUPS job *completed* (whichever first) · **E5** CUPS printer error / queue stopped · **E7** CUPS job cancelled/aborted · **E9** stage limit exceeded (stall) · **E10** operator "Foto ist da" · **E11** operator "Foto fehlt" · **E12** booth restart · **E14** printer status query result (only while the queue is stopped: *printed* = printing seen, then Idle; *idle, nothing printed*; *error*; *no answer*).
 
@@ -246,7 +247,7 @@ Transitions (normative). "log" = logged only. "evidence" = recorded and shown on
 | `DONE` | log | log | (next copy or gate) | log | — | log | ignored | ignored |
 | `CANCELLED` | log | log | (gate) | log | — | log | ignored | ignored |
 
-Entry events: E1 creates a copy in `SENT`; E2 creates it in `ERROR`; E12 puts every unfinished copy found in CUPS into `AWAIT_OPERATOR` (FR-5.13). Copy k+1 of a request is sent {{T_take_hint}} after `DONE` of copy k < N, whether or not the photo has been taken (FR-7.19). In `DONE`/`CANCELLED` an E5 belongs to no job and only affects the Busy Gate (§6).
+Entry events: E1 creates a copy in `SENT`; E2 creates it in `ERROR`; E12 puts every unfinished copy found in CUPS into `AWAIT_OPERATOR` (FR-5.13). E7 with the job's last message `Printer error: Incorrect media for job (0a)` is not a cancel: the copy goes to `ERROR` (FR-5.18), as for E5. Copy k+1 of a request is sent {{T_take_hint}} after `DONE` of copy k < N, whether or not the photo has been taken (FR-7.19). In `DONE`/`CANCELLED` an E5 belongs to no job and only affects the Busy Gate (§6).
 
 Stage order: `SENT` < `FEEDING` < `LAYER_1` … `LAYER_4`. A skipped stage (e.g. `Feeding Paper` or `MAGENTA` never seen because a poll missed it) is logged; the stage shown jumps to the stage reported. E4 is the only event that moves a copy to `DONE` on its own, and only from `LAYER_4`.
 
@@ -266,6 +267,7 @@ Stage order: `SENT` < `FEEDING` < `LAYER_1` … `LAYER_4`. A skipped stage (e.g.
 | FR-5.13 | Must | After a booth restart, an unfinished job found in CUPS shall be held, set to `AWAIT_OPERATOR`, and not sent to the printer until the operator decides on the phone. `[user]` | approved |
 | FR-5.14 | Must | Backend messages and printer status query results (E14) received in `ERROR` or `AWAIT_OPERATOR` shall be recorded as evidence with timestamps and shown on the operator web UI, e.g. "Drucker hat gedruckt (14:32:05)" or "Drucker meldet keinen Druck – Foto vermutlich verloren". `[derived]` A4 | approved |
 | FR-5.15 | Must | Every copy shall reach the printer's output exactly once: no requested copy missing, no copy printed twice. `[user]` G0 | approved |
+| FR-5.18 | Must | When the backend cancels a copy's job with `0x0A` (`Incorrect media for job`), the copy shall go to `ERROR` (not `CANCELLED`) with the Appendix B text; the operator web UI shall offer only "Behoben – nochmal drucken" (with confirmation), and on it the booth shall send the copy again as a new CUPS job. No reconciliation is needed, since CUPS has already removed the job. `[user]` OD6, R9 | approved |
 
 | ID | Precondition · stimulus | Expected observation | Must NOT happen | Tier |
 |---|---|---|---|---|
@@ -282,6 +284,7 @@ Stage order: `SENT` < `FEEDING` < `LAYER_1` … `LAYER_4`. A skipped stage (e.g.
 | FR-5.13 | Job pending in simulated CUPS · restart booth | `AWAIT_OPERATOR`, queue stays disabled | job sent to printer | integration |
 | FR-5.14 | `ERROR` · simulated query reports printing → Idle | web UI shows "Drucker hat gedruckt" with time | evidence missing | unit |
 | FR-5.15 | see §5.4 | | | integration + bench |
+| FR-5.18 | Simulated backend cancels with `Incorrect media for job (0a)` · operator "Behoben – nochmal drucken" | `ERROR` with "Falsche Papier- oder Farbkassette"; then one new job, copy printed once | `CANCELLED`; print screen closes; copy lost; two new jobs | integration |
 
 ### 5.4 Exactly-once contracts (full form)
 
@@ -525,7 +528,7 @@ Access reuses upstream's admin login `[user]`: the operator opens the login page
 | FR-12b.14 | Must | A login on the phone shall stay valid for at least 24 h (upstream: 48 h, `lib/boot.php` `[code]`); the printer status page shall not log the operator out by itself. (Upstream's menu page logs out after 60 s `[code]`; that stays on the menu only.) `[user]` | approved |
 | FR-12b.15 | Should | The printer status page shall have a link back to the menu. | approved |
 | FR-12b.3 | Must | Shall show: current stage, copy k of N, the full CUPS error text with the Appendix B guest text and staff hint, the last backend message, the evidence of FR-5.14 with timestamps (incl. the printer status query result and *no answer* periods), and whether the CUPS queue is stopped. `[user]` | approved |
-| FR-12b.4 | Must | While a copy is in `ERROR` or `AWAIT_OPERATOR`, shall offer "Foto ist da" and "Foto fehlt"; a decision shall be sent only after a second confirmation step naming the copy ("Kopie 2 von 3: Foto ist da – bestätigen?"). `[user]` | approved |
+| FR-12b.4 | Must | While a copy is in `ERROR` or `AWAIT_OPERATOR`, shall offer "Foto ist da" and "Foto fehlt" (for `0x0A` only "Behoben – nochmal drucken", FR-5.18); a decision shall be sent only after a second confirmation step naming the copy ("Kopie 2 von 3: Foto ist da – bestätigen?"). `[user]` | approved |
 | FR-12b.17 | Must | The booth shall accept an operator decision only while a copy is in `ERROR` or `AWAIT_OPERATOR`. `[derived]` (was FR-10.7) | approved |
 | FR-12b.18 | Must | For each copy in `ERROR` or `AWAIT_OPERATOR`, only the first confirmed decision shall be applied, from whichever browser it came; a later decision for the same copy shall be ignored and logged, and every open printer status page shall show the decision that was applied. `[derived]` R12 (was FR-10.8) | approved |
 | FR-12b.6 | Must | Shall update within {{T_ui}} of a state change without a manual reload. | approved |
@@ -689,7 +692,7 @@ Five prints answer the `FAST_RETURN=0` safety question and all real-printer ques
 | B-Q3 | For each error: what do CUPS job state, printer state and message show; is the queue stopped; is the job pending? (FR-9.2, FR-9.6) |
 | B-Q4 | After the fix, does the printer print the held photo by itself, or only after its print button, or not at all? After a jam or ink-sheet error, was an ink panel set used up (check the cassette's ribbon), and how many sheets were lost? (A4, A7, FR-8.10) |
 | B-Q5 | With the job still pending, does `cupsenable` send it again (duplicate)? What does CUPS report afterwards? (R3, FR-6.4) |
-| B-Q6 | Does backend status `0x0A` (job cancelled instead of queue stopped) occur, and for what? Recorded only if it happens. (R9, OD6) |
+| B-Q6 | When `0x0A` ("Incorrect media for job") first occurs: was really nothing printed and no sheet used? Recorded only if it happens; can be provoked with a wrong-size paper tray or ink cassette if one is at hand. (R9, FR-5.18) |
 B-Q7 (front sensor) was removed with the ESP32 unit in v0.16. B-Q8 (photo left on the tray) was answered by the owner in v0.17: no effect (A8). B-Q9 (printer query reliability) moved to the event observation E-1 (§17.6) as E-Q1; B-1 still runs the query in prints 3–5 and logs it.
 
 **Exit:** B-Q1…B-Q5 answered (B-Q6 if seen); Appendix A filled; results added to this FSD's lifecycle (Appendix D, `related_test_baseline`).
@@ -871,10 +874,13 @@ Removed in v0.16 with the ESP32 unit: `T_sent_to_pass1`, `T_pass`, `T_eject` (re
 | `No Ink (07)` `[code]` P-1: ink cassette removed | Farbkassette fehlt | Farbkassette einsetzen – der Drucker druckt das Foto danach selbst. Druckt er nicht innerhalb einer Minute von selbst: Drucktaste am Drucker drücken. Dann am Handy bestätigen, ob das Foto da ist. |
 | `No Paper and Ink (09)` `[code]` | Papier- oder Farbkassette fehlt | Beide Kassetten prüfen und einsetzen – der Drucker druckt das Foto danach selbst. Druckt er nicht innerhalb einer Minute von selbst: Drucktaste am Drucker drücken. Dann am Handy bestätigen, ob das Foto da ist. |
 | `Ink Cassette Empty (06)` `[code]` | Farbkassette leer | Farbkassette tauschen – der Drucker druckt das Foto danach meist selbst. Dann am Handy bestätigen, ob das Foto da ist. *(to be checked)* |
-| `Unknown Error (0c)` `[code]` P-1: ink sheet torn / slack | Problem mit der Farbkassette | Drucker ausschalten und wieder einschalten, Farbkassette entnehmen, Farbfolie straffen oder Kassette tauschen. Das Foto ist danach verloren: am Handy *Foto fehlt* bestätigen. |
+| `Unknown Error (0c)` `[code]` P-1: ink sheet torn / slack; `0x0C` is "Ink jam" in upstream Gutenprint, unnamed in Debian 12 | Problem mit der Farbkassette | Drucker ausschalten und wieder einschalten, Farbkassette entnehmen, Farbfolie straffen oder Kassette tauschen. Das Foto ist danach verloren: am Handy *Foto fehlt* bestätigen. |
 | `Paper jam (0b)` `[code]` | Papierstau | Den Anweisungen am Druckerdisplay folgen (Drucker aus- und wieder einschalten). Dann am Handy bestätigen, ob das Foto da ist. *(to be checked; the printer display asks for a power cycle `[user]`, after which the held photo is probably lost, A4)* |
+| `Incorrect media for job (0a)` `[code]` R9 | Falsche Papier- oder Farbkassette | Papierkassette und Farbkassette für Postkarten einsetzen, dann am Handy *Behoben – nochmal drucken* bestätigen. *(to be checked)* |
+| `Unknown Error (08)` `[code]` — `0x08` is "Incorrect Ink loaded" in upstream Gutenprint; Debian 12 has no text for it. Seen at the 2026-11-22 event | Falsche Farbkassette | Farbkassette für Postkarten einsetzen. Druckt der Drucker danach nicht innerhalb einer Minute von selbst: Drucktaste am Drucker drücken. Dann am Handy bestätigen, ob das Foto da ist. *(to be checked)* |
+| `Incorrect Paper loaded (05)` `[code]` | Falsche Papierkassette | Papierkassette für Postkarten einsetzen. Druckt der Drucker danach nicht innerhalb einer Minute von selbst: Drucktaste am Drucker drücken. Dann am Handy bestätigen, ob das Foto da ist. *(to be checked)* |
 | printer not connected / not found (assumed) | Drucker nicht verbunden | USB-Kabel und Strom prüfen. |
-| any other, e.g. `Unknown Error (08)` `[code]` | Druckerproblem – bitte Personal rufen | *(raw CUPS message)* |
+| any other `[code]` | Druckerproblem – bitte Personal rufen | *(raw CUPS message)* |
 
 **Information (not errors)**
 
@@ -891,7 +897,7 @@ Removed in v0.16 with the ESP32 unit: `T_sent_to_pass1`, `T_pass`, `T_eject` (re
 
 | Situation | Text |
 |---|---|
-| Decision prompt | Foto ist da · Foto fehlt |
+| Decision prompt | Foto ist da · Foto fehlt *(for `0x0A`: Behoben – nochmal drucken, FR-5.18)* |
 | Decision confirmation | Kopie k von N: Foto ist da – bestätigen? / Kopie k von N: Foto fehlt – nochmal drucken? |
 | Decided in another browser (FR-12b.18) | Bereits entschieden: Foto ist da / Foto fehlt |
 | Connection lost | Keine Verbindung zur Booth |
@@ -909,7 +915,7 @@ The panel texts (old Appendix C, first table) were removed with the panel in v0.
 
 ```yaml
 document_status: draft
-fsd_version: 0.24
+fsd_version: 0.25
 repository: starkerflamingo32/photobooth (branch booth)
 baseline_commit: e8c2cbd3
 applicable_firmware_version: n/a (no ESP32 unit since v0.16)
@@ -996,6 +1002,9 @@ change_history:
   - 2026-11-27 v0.23: review block 5 — FR-7.9, 8.9, 12b.7, 12b.10, 12b.12, 12b.15, 12b.19, NFR-13.4, FR-14.2
       approved; no requirement left `proposed`
   - 2026-11-27 v0.24: review block 6 — Appendix B and C wording approved; header "Load defined" updated
+  - 2026-11-27 v0.25: 0x0A identified from the Gutenprint source (Debian 12 and upstream) as "Incorrect media for job";
+      OD6 decided — 0x0A is a printer error, copy resent after the fix (FR-5.18); R9, B-Q6 updated; Appendix B
+      rows for 0a, 08 ("Incorrect Ink loaded" upstream, seen at the 2026-11-22 event) and 05; 0c is "Ink jam" upstream
 superseded_requirements:
   # v0.21
   - FR-8.4 v0.20 (count 0 blocks new prints and holds the next copy) — warning only (FR-8.4 v0.21)
@@ -1048,7 +1057,7 @@ superseded_requirements:
   - FR-10.3 v0.1, FR-10.4 (CUPS-only fallback stages) — replaced by OD1
   - NFR-12.2 (some mechanism re-enables the queue) — booth reconciliation (FR-6.4, FR-6.11)
   - FR-13.x → FR-14.x (renumbered with the new §12)
-open_decisions: see §4.4 (OD6), each naming the requirement it gates; OD13 is a planned decision point after the first event (E-1), not a blocker
+open_decisions: none open; OD13 is a planned decision point after the first event (E-1), not a blocker
 related_test_baseline: P-1 2026-11-26 (pre-bench: 2 normal prints, paper, ink and ink-sheet errors, resend, §17.3.1); B-1, E-1 and §17.5 not run
 ```
 
