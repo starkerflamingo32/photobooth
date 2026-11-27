@@ -8,7 +8,7 @@
 |---|---|
 | Created | 2026-11-23 |
 | Last updated | 2026-11-27 |
-| Load defined | **No** — bench session B-1 not run (§17.3; pre-bench runs P-1 done: 2 normal prints, paper, ink and ink-sheet errors, §17.3.1; B-Q1–B-Q5 answered for one sample each), print-limit characterisation not run (§17.5), timing parameters open (Appendix A), open decisions (§4.4; OD13 waits for the first event, §17.6), Method/UserDocumentation planes not created yet |
+| Load defined | **No** — bench session B-1 not run (§17.3; pre-bench runs P-1 done: 2 normal prints, paper, ink and ink-sheet errors, §17.3.1; B-Q1–B-Q5 answered for one sample each), print-limit characterisation not run (§17.5), timing parameters open (Appendix A), open decisions OD3–OD6 (§4.4; OD13 is a planned decision point after the first event, §17.6, and does not block "defined"), Method/UserDocumentation planes not created yet |
 
 Full lifecycle metadata: Appendix D.
 
@@ -63,6 +63,7 @@ The goal: each photo is printed exactly once, only one print runs at a time, and
 Guest presses "Drucken" (N copies)
   → booth busy?  yes → "Drucker beschäftigt" (no job created)
   → copy k sent to CUPS          → "Druckauftrag gesendet (Kopie k von N)"
+  → backend reports Feeding Paper  → "Papier wird eingezogen"
   → backend reports Printing YELLOW / MAGENTA / CYAN / LAMINATE
                                  → Gelb / Magenta / Cyan / Schutzschicht (1/4…4/4)
   → backend reports "Print complete", CUPS job completed → copy k done
@@ -202,9 +203,11 @@ R4 (IR misreads) and R6 (ESP32 on the shared USB hub) were removed with the ESP3
 | OD4 | Booth page reload during a print (e.g. session reload): what does the screen show? | FR-7.12 | The print screen is restored from the tracker's state. `proposed` |
 | OD5 | Guest presses a print button while busy: what is shown? | FR-6.10 | Short notice "Drucker beschäftigt – bitte warten, bis der aktuelle Druck fertig ist". `proposed` |
 | OD6 | Job cancelled by the backend (status `0x0A`): resend the copy, or treat as failed? And after a cancelled print, does the booth go to the start screen (like FR-7.15) or back to the result view? | §5.2 (`CANCELLED`), FR-7.15 | Decide after B-Q6 has shown what `0x0A` means |
-| OD13 | May the booth reconcile **by itself** from the printer status query (*printing → Idle* after the error = photo printed → like "Foto ist da"; *Idle* after a power cycle without printing = lost → like "Foto fehlt"), or is the query only evidence for the operator's decision? | FR-6.4, FR-5.14, FR-9.8 | **Until E-1 is evaluated:** evidence only; the operator decides. **After E-1 (§17.6), if the query never gave a wrong *printed* or *nothing printed* in a clean run — middle option:** the booth decides by itself only on clean evidence and asks the operator otherwise: (a) *printing* seen, then *Idle*, with no *no answer* period in between → applied as "Foto ist da"; (b) *Idle* after a power cycle (printer unreachable, then back), *printing* never seen, no *no answer* period since the error → applied as "Foto fehlt"; (c) anything else (a hang or *no answer* in the window, the error still active, *printing* without *Idle*, an unknown state, a booth restart, FR-5.13) → operator decides as now. An automatic decision goes through the same reconciliation (FR-6.4), counts as the first decision (FR-12b.18), is logged with source *printer query* (FR-14.1), and is shown on the phone with its reason ("Automatisch entschieden: Foto ist da – Drucker hat gedruckt (14:32:05)"). If E-1 shows a wrong clean result even once, the operator keeps deciding in every case. (P-1: 2 of 2 correct, with ~17 s hangs, R14.) `proposed` |
+| OD13 *(planned decision point)* | May the booth reconcile **by itself** from the printer status query (*printing → Idle* after the error = photo printed → like "Foto ist da"; *Idle* after a power cycle without printing = lost → like "Foto fehlt"), or is the query only evidence for the operator's decision? | FR-6.4, FR-5.14, FR-9.8 | **Until E-1 is evaluated:** evidence only; the operator decides. **After E-1 (§17.6), if the query never gave a wrong *printed* or *nothing printed* in a clean run — middle option:** the booth decides by itself only on clean evidence and asks the operator otherwise: (a) *printing* seen, then *Idle*, with no *no answer* period in between → applied as "Foto ist da"; (b) *Idle* after a power cycle (printer unreachable, then back), *printing* never seen, no *no answer* period since the error → applied as "Foto fehlt"; (c) anything else (a hang or *no answer* in the window, the error still active, *printing* without *Idle*, an unknown state, a booth restart, FR-5.13) → operator decides as now. An automatic decision goes through the same reconciliation (FR-6.4), counts as the first decision (FR-12b.18), is logged with source *printer query* (FR-14.1), and is shown on the phone with its reason ("Automatisch entschieden: Foto ist da – Drucker hat gedruckt (14:32:05)"). If E-1 shows a wrong clean result even once, the operator keeps deciding in every case. (P-1: 2 of 2 correct, with ~17 s hangs, R14.) `proposed` |
 
-OD1 (ESP32 unit offline), OD2 (IR events without a job) and OD8 (panel while the booth is unreachable) were removed with the ESP32 unit in v0.16. Decided in v0.17: OD11 (a photo left on the tray does no harm; take-photo message for {{T_take_hint}}, FR-7.19) and OD12 (fallback is the printer status page on the booth laptop, FR-12b.20). `[user]`
+OD1 (ESP32 unit offline), OD2 (IR events without a job) and OD8 (panel while the booth is unreachable) were removed with the ESP32 unit in v0.16. **OD13 is a planned decision point, not an open gap** `[user]`: the FSD is complete with its current behaviour (printer query as evidence only, operator decides), which stays in force until E-1 (§17.6, Phase 5) decides it. It does not block "Load defined"; deciding it later is a change to this FSD.
+
+Decided in v0.17: OD11 (a photo left on the tray does no harm; take-photo message for {{T_take_hint}}, FR-7.19) and OD12 (fallback is the printer status page on the booth laptop, FR-12b.20). `[user]`
 
 ---
 
@@ -222,21 +225,22 @@ States of the copy currently being printed. The request additionally carries "co
 
 | State | Shown as (Appendix B) | Entered on |
 |---|---|---|
-| `SENT` | Druckauftrag gesendet | CUPS accepted the copy's job (covers *Waiting for printer*, *Feeding Paper*) |
+| `SENT` | Druckauftrag gesendet | CUPS accepted the copy's job (covers *Waiting for printer idle / acknowledgement*) |
+| `FEEDING` | Papier wird eingezogen | backend reports `Feeding Paper` |
 | `LAYER_1`…`LAYER_4` | Gelb / Magenta / Cyan / Schutzschicht | backend reports `Printing YELLOW` / `MAGENTA` / `CYAN` / `LAMINATE` |
 | `DONE` | last copy: Fertig – bitte Foto entnehmen (for {{T_take_hint}}) | `Print complete` or job *completed* after `LAYER_4`, or operator "Foto ist da" |
 | `ERROR` | CUPS error text | CUPS printer error / queue stopped while this job is active; CUPS refused the job |
 | `AWAIT_OPERATOR` | Druck wird geprüft – bitte Personal rufen | stall (FR-5.5); job *completed* before `LAYER_4` (FR-5.4); booth restart with an unfinished job (FR-5.13) |
 | `CANCELLED` | Druck abgebrochen | job cancelled or aborted in CUPS |
 
-Events: **E1** CUPS accepted · **E2** CUPS refused · **E3** backend layer message (`Printing YELLOW/MAGENTA/CYAN/LAMINATE`) · **E4** backend `Print complete` or CUPS job *completed* (whichever first) · **E5** CUPS printer error / queue stopped · **E7** CUPS job cancelled/aborted · **E9** stage limit exceeded (stall) · **E10** operator "Foto ist da" · **E11** operator "Foto fehlt" · **E12** booth restart · **E14** printer status query result (only while the queue is stopped: *printed* = printing seen, then Idle; *idle, nothing printed*; *error*; *no answer*).
+Events: **E1** CUPS accepted · **E2** CUPS refused · **E3** backend stage message (`Feeding Paper`, `Printing YELLOW/MAGENTA/CYAN/LAMINATE`) · **E4** backend `Print complete` or CUPS job *completed* (whichever first) · **E5** CUPS printer error / queue stopped · **E7** CUPS job cancelled/aborted · **E9** stage limit exceeded (stall) · **E10** operator "Foto ist da" · **E11** operator "Foto fehlt" · **E12** booth restart · **E14** printer status query result (only while the queue is stopped: *printed* = printing seen, then Idle; *idle, nothing printed*; *error*; *no answer*).
 
 Transitions (normative). "log" = logged only. "evidence" = recorded and shown on the operator web UI (FR-5.14). E10/E11 come from the operator web UI; only the first confirmed decision counts (FR-12b.18).
 
 | State \ Event | E3 layer message | E4 complete | E5 CUPS error | E7 cancelled | E9 stall | E14 printer query | E10 Foto ist da | E11 Foto fehlt |
 |---|---|---|---|---|---|---|---|---|
-| `SENT` | → `LAYER_m` for the layer named | → `AWAIT_OPERATOR` (FR-5.4) | → `ERROR` | → `CANCELLED` | → `AWAIT_OPERATOR` | log | ignored (not offered) | ignored (not offered) |
-| `LAYER_n` (n<4) | later layer m > n → `LAYER_m`; same or earlier → log | → `AWAIT_OPERATOR` (FR-5.4) | → `ERROR` | → `CANCELLED` | → `AWAIT_OPERATOR` | log | ignored | ignored |
+| `SENT` | → `FEEDING` or `LAYER_m` for the stage named | → `AWAIT_OPERATOR` (FR-5.4) | → `ERROR` | → `CANCELLED` | → `AWAIT_OPERATOR` | log | ignored (not offered) | ignored (not offered) |
+| `FEEDING`, `LAYER_n` (n<4) | later stage → that stage; same or earlier → log | → `AWAIT_OPERATOR` (FR-5.4) | → `ERROR` | → `CANCELLED` | → `AWAIT_OPERATOR` | log | ignored | ignored |
 | `LAYER_4` | log | → `DONE` | → `ERROR` | → `CANCELLED` | → `AWAIT_OPERATOR` | log | ignored | ignored |
 | `ERROR` | evidence | evidence | log | → `CANCELLED` | — | evidence | → `DONE` (reconcile, FR-6.4) | → `SENT` (reconcile, FR-6.4) |
 | `AWAIT_OPERATOR` | evidence | evidence | → `ERROR` | → `CANCELLED` | — | evidence | → `DONE` (reconcile) | → `SENT` (reconcile) |
@@ -245,7 +249,7 @@ Transitions (normative). "log" = logged only. "evidence" = recorded and shown on
 
 Entry events: E1 creates a copy in `SENT`; E2 creates it in `ERROR`; E12 puts every unfinished copy found in CUPS into `AWAIT_OPERATOR` (FR-5.13). Copy k+1 of a request is sent {{T_take_hint}} after `DONE` of copy k < N, whether or not the photo has been taken (FR-7.19). In `DONE`/`CANCELLED` an E5 belongs to no job and only affects the Busy Gate (§6).
 
-A skipped layer (e.g. `MAGENTA` never seen because a poll missed it) is logged; the stage shown jumps to the layer reported. E4 is the only event that moves a copy to `DONE` on its own, and only from `LAYER_4`.
+Stage order: `SENT` < `FEEDING` < `LAYER_1` … `LAYER_4`. A skipped stage (e.g. `Feeding Paper` or `MAGENTA` never seen because a poll missed it) is logged; the stage shown jumps to the stage reported. E4 is the only event that moves a copy to `DONE` on its own, and only from `LAYER_4`.
 
 ### 5.3 Requirements
 
@@ -253,22 +257,22 @@ A skipped layer (e.g. `MAGENTA` never seen because a poll missed it) is logged; 
 |---|---|---|---|
 | FR-5.1 | Must | The tracker shall assign `SENT` only after CUPS has accepted the copy's job. `[user]` | approved |
 | FR-5.9 | Must | A job CUPS refuses shall go to `ERROR` with the CUPS reason. `[user]` | approved |
-| FR-5.2 | Must | The backend messages `Printing YELLOW`, `MAGENTA`, `CYAN`, `LAMINATE` for the current copy's job shall set `LAYER_1`…`LAYER_4`; the stage shall never move backwards. `[user]` (v0.16: from the backend, not from a rear sensor) | proposed |
-| FR-5.3 | Must | `Print complete` or CUPS job *completed* (whichever comes first) after `LAYER_4` shall set `DONE`. `[user]` A9 | proposed |
-| FR-5.4 | Must | CUPS job *completed* or `Print complete` before `LAYER_4` was reported shall not set `DONE`; the copy goes to `AWAIT_OPERATOR` with cause *status unclear* (e.g. fast return active again, R2). `[derived]` R2, R17 | proposed |
-| FR-5.6 | Must | The text "Fertig" shall only be shown for a copy in `DONE`. `[derived]` R2 | proposed |
+| FR-5.2 | Must | The backend messages for the current copy's job shall set the stage: `Feeding Paper` → `FEEDING`, `Printing YELLOW`, `MAGENTA`, `CYAN`, `LAMINATE` → `LAYER_1`…`LAYER_4`; the stage shall never move backwards. `[user]` (v0.16: from the backend, not from a rear sensor; `FEEDING` added v0.19) | approved |
+| FR-5.3 | Must | `Print complete` or CUPS job *completed* (whichever comes first) after `LAYER_4` shall set `DONE`. `[user]` A9 | approved |
+| FR-5.4 | Must | CUPS job *completed* or `Print complete` before `LAYER_4` was reported shall not set `DONE`; the copy goes to `AWAIT_OPERATOR` with cause *status unclear* (e.g. fast return active again, R2). `[derived]` R2, R17 | approved |
+| FR-5.6 | Must | The text "Fertig" shall only be shown for a copy in `DONE`. `[derived]` R2 | approved |
 | FR-5.5 | Must | If a stage lasts longer than its limit in Appendix A, the tracker shall set `AWAIT_OPERATOR` with cause *stall*. `[user]` (stall is not a CUPS error, G3) | approved (limits open) |
 | FR-5.11 | Must | Each copy shall be sent as its own CUPS job, and copy k+1 only after copy k is `DONE`. `[user]` | approved |
 | FR-5.12 | Must | After an error on copy k is resolved, the remaining copies shall be sent without staff or guest action. `[user]` | approved |
 | FR-5.13 | Must | After a booth restart, an unfinished job found in CUPS shall be held, set to `AWAIT_OPERATOR`, and not sent to the printer until the operator decides on the phone. `[user]` | approved |
-| FR-5.14 | Must | Backend messages and printer status query results (E14) received in `ERROR` or `AWAIT_OPERATOR` shall be recorded as evidence with timestamps and shown on the operator web UI, e.g. "Drucker hat gedruckt (14:32:05)" or "Drucker meldet keinen Druck – Foto vermutlich verloren". `[derived]` A4 | proposed |
+| FR-5.14 | Must | Backend messages and printer status query results (E14) received in `ERROR` or `AWAIT_OPERATOR` shall be recorded as evidence with timestamps and shown on the operator web UI, e.g. "Drucker hat gedruckt (14:32:05)" or "Drucker meldet keinen Druck – Foto vermutlich verloren". `[derived]` A4 | approved |
 | FR-5.15 | Must | Every copy shall reach the printer's output exactly once: no requested copy missing, no copy printed twice. `[user]` G0 | approved |
 
 | ID | Precondition · stimulus | Expected observation | Must NOT happen | Tier |
 |---|---|---|---|---|
 | FR-5.1 | Simulated CUPS accepts · guest presses Drucken | `SENT` after acceptance | `SENT` before acceptance | unit |
 | FR-5.9 | Queue rejecting (`cupsreject`) · guest presses Drucken | `ERROR` with CUPS reason | "Druckauftrag gesendet" | integration |
-| FR-5.2 | `SENT` · inject YELLOW, MAGENTA, CYAN, LAMINATE | `LAYER_1`…`LAYER_4` in order | stage skipped or repeated | unit |
+| FR-5.2 | `SENT` · inject Feeding Paper, YELLOW, MAGENTA, CYAN, LAMINATE | `FEEDING`, `LAYER_1`…`LAYER_4` in order | stage skipped or repeated | unit |
 | FR-5.2 | `LAYER_3` · inject `Printing MAGENTA` (as in a query hang, R14) | stays `LAYER_3` | `LAYER_2` | unit |
 | FR-5.3 | `LAYER_4` · inject `Print complete` | `DONE` | `DONE` before `LAYER_4` | unit |
 | FR-5.4 | `LAYER_1` · CUPS completed (simulated fast return on) | `AWAIT_OPERATOR`, cause *status unclear* | `DONE`; "Fertig" | unit |
@@ -482,10 +486,10 @@ Delivers, for the `selphy` queue: whether a job was accepted, each job's state (
 | FR-9.4 | Must | A failed printer status read while a job is processing shall not be reported as a printer error. `[code]` R2 | approved |
 | FR-9.5 | Must | A printer error shall reach the tracker within {{T_cups_poll}}. | approved (value open) |
 | FR-9.6 | Must | Shall report a job left pending in a stopped queue as pending, so reconciliation (FR-6.4) can find it. `[code]` R3 | approved |
-| FR-9.10 | Must | Shall deliver the backend's printer-state messages for the active job (`Feeding Paper`, `Printing YELLOW/MAGENTA/CYAN/LAMINATE`, `Print complete`) to the tracker within {{T_cups_poll}}, tagged with the job ID they belong to; unknown messages are delivered as such and logged. `[user]` §2.3 | proposed |
-| FR-9.7 | Must | While the queue is stopped and a copy is in `ERROR` or `AWAIT_OPERATOR`, shall query the printer's own status about every {{T_printer_poll}}; never while the queue is enabled, a CUPS backend is attached to the printer, or `cupsenable` runs. `[user]` R14 | proposed |
-| FR-9.8 | Must | From the printer status query, shall report only: *printing* (any `Feeding Paper` / `Printing …` state), *idle*, *error* (with text), *no answer*; and per held copy whether printing was seen and then *idle* followed (= *printed*), or *idle* followed without printing (= *nothing printed*). Layer names from the query shall not be used. `[derived]` R14 | proposed |
-| FR-9.9 | Must | A query that hangs or fails (e.g. `libusb error -7`) shall be reported as *no answer*, never as a printer error; a query running longer than {{T_query_hang}} shall be stopped and retried. `[code]` R14 | proposed |
+| FR-9.10 | Must | Shall deliver the backend's printer-state messages for the active job (`Feeding Paper`, `Printing YELLOW/MAGENTA/CYAN/LAMINATE`, `Print complete`) to the tracker within {{T_cups_poll}}, tagged with the job ID they belong to; unknown messages are delivered as such and logged. `[user]` §2.3 | approved |
+| FR-9.7 | Must | While the queue is stopped and a copy is in `ERROR` or `AWAIT_OPERATOR`, shall query the printer's own status about every {{T_printer_poll}}; never while the queue is enabled, a CUPS backend is attached to the printer, or `cupsenable` runs. `[user]` R14 | approved |
+| FR-9.8 | Must | From the printer status query, shall report only: *printing* (any `Feeding Paper` / `Printing …` state), *idle*, *error* (with text), *no answer*; and per held copy whether printing was seen and then *idle* followed (= *printed*), or *idle* followed without printing (= *nothing printed*). Layer names from the query shall not be used. `[derived]` R14 | approved |
+| FR-9.9 | Must | A query that hangs or fails (e.g. `libusb error -7`) shall be reported as *no answer*, never as a printer error; a query running longer than {{T_query_hang}} shall be stopped and retried. `[code]` R14 | approved |
 
 | ID | Precondition · stimulus | Expected observation | Must NOT happen | Tier |
 |---|---|---|---|---|
@@ -824,7 +828,7 @@ How reliable the printer status query is gets decided at a real event, not on th
 
 | Parameter | Meaning | Value |
 |---|---|---|
-| `T_sent_to_layer1` | max time from SENT to `Printing YELLOW` (stall limit) | TBD (B-Q2); P-1 observed 10 s |
+| `T_sent_to_layer1` | max time from SENT to `Printing YELLOW`, through `FEEDING` (stall limit) | TBD (B-Q2); P-1 observed 10 s (Feeding Paper at 1 s) |
 | `T_layer` | max time between layer messages (stall limit) | TBD (B-Q2); P-1 observed 11–12 s |
 | `T_layer4_to_complete` | max time from `Printing LAMINATE` to `Print complete` (stall limit) | TBD (B-Q2); P-1 observed 12 s |
 | `T_take_hint` | how long "Fertig – bitte Foto entnehmen" stays after the last copy, and "Kopie k von N fertig – bitte Foto entnehmen" between copies | TBD (proposed: 10 s) |
@@ -845,6 +849,7 @@ Removed in v0.16 with the ESP32 unit: `T_sent_to_pass1`, `T_pass`, `T_eject` (re
 | State | Text |
 |---|---|
 | `SENT` | Druckauftrag gesendet |
+| `FEEDING` | Papier wird eingezogen |
 | `LAYER_1` | Druck gestartet – Gelb wird gedruckt (1/4) |
 | `LAYER_2` | Magenta wird gedruckt (2/4) |
 | `LAYER_3` | Cyan wird gedruckt (3/4) |
@@ -905,7 +910,7 @@ The panel texts (old Appendix C, first table) were removed with the panel in v0.
 
 ```yaml
 document_status: draft
-fsd_version: 0.18
+fsd_version: 0.19
 repository: starkerflamingo32/photobooth (branch booth)
 baseline_commit: e8c2cbd3
 applicable_firmware_version: n/a (no ESP32 unit since v0.16)
@@ -980,6 +985,8 @@ change_history:
   - 2026-11-27 v0.18: OD13 proposal — middle option after E-1: the booth decides by itself only on clean printer
       query evidence (printing → Idle without a hang; Idle after a power cycle without printing), the operator
       decides everything else; automatic decisions logged and shown on the phone with their reason
+  - 2026-11-27 v0.19: OD13 made a planned decision point (does not block "defined"); review block 1 — FR-5.2,
+      5.3, 5.4, 5.6, 5.14, FR-9.7…9.10 approved; FEEDING stage ("Papier wird eingezogen") added to FR-5.2
 superseded_requirements:
   # v0.17
   - FR-7.20 v0.16 (remind the guest to take an earlier photo before a new request) — not needed, photo on the tray does no harm
@@ -1028,7 +1035,7 @@ superseded_requirements:
   - FR-10.3 v0.1, FR-10.4 (CUPS-only fallback stages) — replaced by OD1
   - NFR-12.2 (some mechanism re-enables the queue) — booth reconciliation (FR-6.4, FR-6.11)
   - FR-13.x → FR-14.x (renumbered with the new §12)
-open_decisions: see §4.4 (OD3–OD6, OD13), each naming the requirement it gates
+open_decisions: see §4.4 (OD3–OD6), each naming the requirement it gates; OD13 is a planned decision point after the first event (E-1), not a blocker
 related_test_baseline: P-1 2026-11-26 (pre-bench: 2 normal prints, paper, ink and ink-sheet errors, resend, §17.3.1); B-1, E-1 and §17.5 not run
 ```
 
