@@ -8,7 +8,7 @@
 |---|---|
 | Created | 2026-11-23 |
 | Last updated | 2026-11-27 |
-| Load defined | **No** — B-1 done 2026-11-27 (§17.3.2), Appendix A complete, all owner decisions made (R18 decided in v0.29). Planes installed in v0.34. Still missing: a final run of the full gate (`/define` §12.5). Every Must/Should has a contract since v0.33. Not blocking: print-limit characterisation (§17.5) runs in Phase 1, since it needs the virtual test setup and FR-8.8 already states the requirement; auto-resume (FR-6.15) is checked at the first event (E-1, §17.6). |
+| Load defined | **Yes** (v0.36, 2026-11-27) — every Must/Should has a verification contract, every phase can be entered from the ones before it, the three planes exist and are committed, no `(assumed)` on anything architecture-critical. Gate run by hand (no `testing/gates/` checker yet). Known exception, deferred by the owner: dated P-1/B-1 results in §17.3.1–17.3.2 stay in the FSD until `/build` sets up `test-results/`. Approval (Appendix D `approval_status`) is the owner's sign-off. |
 
 Full lifecycle metadata: Appendix D.
 
@@ -149,7 +149,7 @@ Dependencies point downward only. §10–§12 (unit interface, ESP32 sensor unit
 | **1 — Virtual test setup** | §17.1: simulated SELPHY backend that emits the backend's stage messages, can inject SELPHY errors and pending/stopped-queue states, and answers printer status queries; browser test setup (§17.1.1); workflows (§17.2) | Every unit, integration and e2e test in this FSD can be run without hardware, in GitHub Actions; §17.5 run against upstream | — |
 | **2 — Booth logic + operator web UI + supply counters** | §5, §6, §7, §8, §8b, §9, §12b against the virtual test setup | All unit and integration tests pass; exactly-once contracts (§5.4) pass in simulation, with decisions made on the web UI | Phase 1 |
 | **3 — Bench session** | Bench session B-1 (§17.3) on the real SELPHY; **done 2026-11-27**, ahead of Phase 1 (§17.3.2) `[user]` | B-1 run; B-Q1…B-Q5 answered (B-Q6 if seen); Appendix A filled | — (B-1 needed only the real printer and the bench scripts; it was run before Phase 1 `[user]`. Its results feed Phase 2 as fixtures and limits.) |
-| **4 — Acceptance** | §17.4 on the real booth | Acceptance list passes | Phase 3 |
+| **4 — Acceptance** | Booth stack from branch `booth` installed on the event laptop through photobooth-setup's native install; §17.4 on the real booth | Acceptance list passes, including the bench-tier contracts (§17.4 items 10–13) | Phases 2, 3 |
 | **5 — First event** | Event observation E-1 (§17.6): printer query logged next to every operator decision | E-Q1 answered; auto-resume default confirmed or changed | Phase 4 |
 
 ---
@@ -171,7 +171,7 @@ Dependencies point downward only. §10–§12 (unit interface, ESP32 sensor unit
 | R11 | The operator web UI adds network exposure: anyone on the booth Wi-Fi could make operator decisions. | WPA2 Wi-Fi joined only by laptop and operator phone; upstream admin login on the web UI (FR-12b.2); §15. |
 | R12 | Two browsers (two staff phones, or two tabs) give conflicting decisions. | First confirmed decision wins; later ones are ignored and every operator page shows the decision made (FR-12b.18). |
 | R13 | The fork is public and photobooth-setup is private: the fork's CI needs a token to build the stack, and test artifacts are visible to others. | Read-only fine-grained token on photobooth-setup only, as an Actions secret; synthetic test data only (§17.1.1, §17.2). |
-| R14 | While the queue is stopped, only a standalone status query (`gutenprint53+usb -s`) can see the printer print the held photo `[code]` P-1. It reconnects to the printer each time and twice per print hung ~17 s (`libusb error -7`) at a layer change; layer names around a hang were wrong. A query on the USB device while a CUPS backend prints could disturb the print. It needs root. | Use only *printing → Idle* from it, never layer names (FR-9.8); query only while the queue is disabled, never while a backend is attached or during `cupsenable` (FR-9.7); a hang is not an error (FR-9.9); root limited to this one command (NFR-15.4). It also shows a lost photo: after the ink-sheet error and a power cycle the printer went straight to *Idle* without printing (P-1 job 123). Decides on its own only on clean evidence and with the switch on (FR-6.15). |
+| R14 | While the queue is stopped, only a standalone status query (`gutenprint53+usb -s`) can see the printer print the held photo `[code]` P-1. It reconnects to the printer each time and twice per print hung ~17 s (`libusb error -7`) at a layer change; layer names around a hang were wrong. A query on the USB device while a CUPS backend prints could disturb the print. It needs root. | Use only *printing → Idle* from it, never layer names (FR-9.8); query only while the queue is disabled, never while a backend is attached or during `cupsenable` (FR-9.11); a hang is not an error (FR-9.9); root limited to this one command (NFR-15.4). It also shows a lost photo: after the ink-sheet error and a power cycle the printer went straight to *Idle* without printing (P-1 job 123). Decides on its own only on clean evidence and with the switch on (FR-6.15). |
 | R15 | Provoking a jam by hand does not give a clean jam: holding the sheet made the gears slip and **tore the ink sheet** (P-1 job 123), costing a cassette. `[code]` | No provoked jam of any kind in B-1 (no hand-held sheet, no spent cassette); a real jam is recorded if one happens during any print (§17.3). `[user]` approved |
 | R18 | **A job the printer already holds cannot be cancelled from CUPS.** `cancel` removes the job only from CUPS; the printer keeps it and prints it as soon as the cause is fixed. B-1 job 126: resent by `cupsenable` into a missing tray (`No Paper (03)`), cancelled in CUPS, tray back in → the printer printed it a second time. Only a power cycle clears a held job (A4, P-1 job 123, owner report on jams). `[code]` | Never resend a copy while the printer may still hold it (FR-6.4). A manual "Foto fehlt" while the printer query does not show *Idle* without an error is at risk: the printer may still print the held photo after the fix, and the resend duplicates it. Before a manual "Foto fehlt" is applied while the printer is not *Idle* without an error, the operator is asked to switch the printer off and on first (FR-12b.22). `[user]` approved |
 | R17 | Stages and "done" now rest on the backend's message texts (`Printing YELLOW`, `Print complete`, …); a Gutenprint update could change them. `[derived]` | Gutenprint version pinned on the booth (§4.3); texts recorded in P-1/B-1 are test fixtures (§17.1); unknown messages are logged and never move a copy to `DONE` (FR-5.4). |
@@ -237,19 +237,19 @@ States of the copy currently being printed. The request additionally carries "co
 | `AWAIT_OPERATOR` | Druck wird geprüft – bitte Personal rufen | stall (FR-5.5); job *completed* before `LAYER_4` (FR-5.4); booth restart with an unfinished job (FR-5.13) |
 | `CANCELLED` | Druck abgebrochen | job cancelled or aborted in CUPS, except a backend cancel with `0x0A` (→ `ERROR`, FR-5.18) |
 
-Events: **E1** CUPS accepted · **E2** CUPS refused · **E3** backend stage message (`Feeding Paper`, `Printing YELLOW/MAGENTA/CYAN/LAMINATE`) · **E4** backend `Print complete` or CUPS job *completed* (whichever first) · **E5** CUPS printer error / queue stopped · **E7** CUPS job cancelled/aborted · **E9** stage limit exceeded (stall) · **E10** operator "Foto ist da" · **E11** operator "Foto fehlt" · **E12** booth restart · **E14** printer status query result (only while the queue is stopped: *printed* = printing seen, then Idle; *idle, nothing printed*; *error*; *no answer*).
+Events: **E1** CUPS accepted · **E2** CUPS refused · **E3** backend stage message (`Feeding Paper`, `Printing YELLOW/MAGENTA/CYAN/LAMINATE`) · **E4** backend `Print complete` or CUPS job *completed* (whichever first) · **E5** CUPS printer error / queue stopped · **E7** CUPS job cancelled/aborted · **E9** stage limit exceeded (stall) · **E10** operator "Foto ist da" · **E11** operator "Foto fehlt" · **E12** booth restart · **E15** operator "Behoben – nochmal drucken" (FR-5.18) · **E14** printer status query result (only while the queue is stopped: *printed* = printing seen, then Idle; *idle, nothing printed*; *error*; *no answer*).
 
-Transitions (normative). "log" = logged only. "evidence" = recorded and shown on the operator web UI (FR-5.14). E10/E11 come from the operator web UI; only the first confirmed decision counts (FR-12b.18).
+Transitions (normative). "log" = logged only. "evidence" = recorded and shown on the operator web UI (FR-5.14). E10/E11 come from the operator web UI or from auto-resume (FR-6.15); E15 only from the operator web UI. Only the first confirmed decision counts (FR-12b.18). "—" = cannot occur: no stage limit runs in this state. For a copy in `ERROR` after a `0x0A` cancel only E15 is offered and E10/E11 are ignored; for every other copy E15 is ignored (not offered).
 
-| State \ Event | E3 layer message | E4 complete | E5 CUPS error | E7 cancelled | E9 stall | E14 printer query | E10 Foto ist da | E11 Foto fehlt |
-|---|---|---|---|---|---|---|---|---|
-| `SENT` | → `FEEDING` or `LAYER_m` for the stage named | → `AWAIT_OPERATOR` (FR-5.4) | → `ERROR` | → `CANCELLED` | → `AWAIT_OPERATOR` | log | ignored (not offered) | ignored (not offered) |
-| `FEEDING`, `LAYER_n` (n<4) | later stage → that stage; same or earlier → log | → `AWAIT_OPERATOR` (FR-5.4) | → `ERROR` | → `CANCELLED` | → `AWAIT_OPERATOR` | log | ignored | ignored |
-| `LAYER_4` | log | → `DONE` | → `ERROR` | → `CANCELLED` | → `AWAIT_OPERATOR` | log | ignored | ignored |
-| `ERROR` | evidence | evidence | log | → `CANCELLED` | — | evidence | → `DONE` (reconcile, FR-6.4) | → `SENT` (reconcile, FR-6.4) |
-| `AWAIT_OPERATOR` | evidence | evidence | → `ERROR` | → `CANCELLED` | — | evidence | → `DONE` (reconcile) | → `SENT` (reconcile) |
-| `DONE` | log | log | (next copy or gate) | log | — | log | ignored | ignored |
-| `CANCELLED` | log | log | (gate) | log | — | log | ignored | ignored |
+| State \ Event | E3 layer message | E4 complete | E5 CUPS error | E7 cancelled | E9 stall | E14 printer query | E10 Foto ist da | E11 Foto fehlt | E15 Behoben |
+|---|---|---|---|---|---|---|---|---|---|
+| `SENT` | → `FEEDING` or `LAYER_m` for the stage named | → `AWAIT_OPERATOR` (FR-5.4) | → `ERROR` | → `CANCELLED` | → `AWAIT_OPERATOR` | log | ignored (not offered) | ignored (not offered) | ignored |
+| `FEEDING`, `LAYER_n` (n<4) | later stage → that stage; same or earlier → log | → `AWAIT_OPERATOR` (FR-5.4) | → `ERROR` | → `CANCELLED` | → `AWAIT_OPERATOR` | log | ignored | ignored | ignored |
+| `LAYER_4` | log | → `DONE` | → `ERROR` | → `CANCELLED` | → `AWAIT_OPERATOR` | log | ignored | ignored | ignored |
+| `ERROR` | evidence | evidence | log | → `CANCELLED` | — | evidence | → `DONE` (reconcile, FR-6.4) | → `SENT` (reconcile, FR-6.4) | → `SENT` as a new job (`0x0A` only, FR-5.20) |
+| `AWAIT_OPERATOR` | evidence | evidence | → `ERROR` | → `CANCELLED` | — | evidence | → `DONE` (reconcile) | → `SENT` (reconcile) | ignored |
+| `DONE` | log | log | (next copy or gate) | log | — | log | ignored | ignored | ignored |
+| `CANCELLED` | log | log | (gate) | log | — | log | ignored | ignored | ignored |
 
 Entry events: E1 creates a copy in `SENT`; E2 creates it in `ERROR`; E12 puts every unfinished copy found in CUPS into `AWAIT_OPERATOR` (FR-5.13). E7 with the job's last message `Printer error: Incorrect media for job (0a)` is not a cancel: the copy goes to `ERROR` (FR-5.18), as for E5. Copy k+1 of a request is sent {{T_take_hint}} after `DONE` of copy k < N, whether or not the photo has been taken (FR-7.19). In `DONE`/`CANCELLED` an E5 belongs to no job and only affects the Busy Gate (§6).
 
@@ -261,7 +261,8 @@ Stage order: `SENT` < `FEEDING` < `LAYER_1` … `LAYER_4`. A skipped stage (e.g.
 |---|---|---|---|
 | FR-5.1 | Must | The tracker shall assign `SENT` only after CUPS has accepted the copy's job. `[user]` | approved |
 | FR-5.9 | Must | A job CUPS refuses shall go to `ERROR` with the CUPS reason. `[user]` | approved |
-| FR-5.2 | Must | The backend messages for the current copy's job shall set the stage: `Feeding Paper` → `FEEDING`, `Printing YELLOW`, `MAGENTA`, `CYAN`, `LAMINATE` → `LAYER_1`…`LAYER_4`; the stage shall never move backwards. `[user]` (v0.16: from the backend, not from a rear sensor; `FEEDING` added v0.19) | approved |
+| FR-5.2 | Must | The backend messages for the current copy's job shall set the stage: `Feeding Paper` → `FEEDING`, `Printing YELLOW`, `MAGENTA`, `CYAN`, `LAMINATE` → `LAYER_1`…`LAYER_4`. `[user]` (v0.16: from the backend, not from a rear sensor; `FEEDING` added v0.19) | approved |
+| FR-5.19 | Must | A backend message naming the current stage or an earlier one shall be logged and shall not change the stage. `[user]` (split from FR-5.2 v0.36) | approved |
 | FR-5.3 | Must | `Print complete` or CUPS job *completed* (whichever comes first) after `LAYER_4` shall set `DONE`. `[user]` A9 | approved |
 | FR-5.4 | Must | CUPS job *completed* or `Print complete` before `LAYER_4` was reported shall not set `DONE`; the copy goes to `AWAIT_OPERATOR` with cause *status unclear* (e.g. fast return active again, R2). `[derived]` R2, R17 | approved |
 | FR-5.6 | Must | The text "Fertig" shall only be shown for a copy in `DONE`. `[derived]` R2 | approved |
@@ -269,16 +270,18 @@ Stage order: `SENT` < `FEEDING` < `LAYER_1` … `LAYER_4`. A skipped stage (e.g.
 | FR-5.11 | Must | Each copy shall be sent as its own CUPS job, and copy k+1 only after copy k is `DONE`. `[user]` | approved |
 | FR-5.12 | Must | After an error on copy k is resolved, the remaining copies shall be sent without staff or guest action. `[user]` | approved |
 | FR-5.13 | Must | After a booth restart, an unfinished job found in CUPS shall be held, set to `AWAIT_OPERATOR`, and not sent to the printer until the operator decides on the phone. `[user]` | approved |
-| FR-5.14 | Must | Backend messages and printer status query results (E14) received in `ERROR` or `AWAIT_OPERATOR` shall be recorded as evidence with timestamps and shown on the operator web UI, e.g. "Drucker hat gedruckt (14:32:05)" or "Drucker meldet keinen Druck – Foto vermutlich verloren". `[derived]` A4 | approved |
+| FR-5.14 | Must | Backend messages and printer status query results (E14) received in `ERROR` or `AWAIT_OPERATOR` shall be recorded as evidence with timestamps (shown on the operator web UI per FR-12b.28), e.g. "Drucker hat gedruckt (14:32:05)" or "Drucker meldet keinen Druck – Foto vermutlich verloren". `[derived]` A4 | approved |
 | FR-5.15 | Must | Every copy shall reach the printer's output exactly once: no requested copy missing, no copy printed twice. `[user]` G0 | approved |
-| FR-5.18 | Must | When the backend cancels a copy's job with `0x0A` (`Incorrect media for job`), the copy shall go to `ERROR` (not `CANCELLED`) with the Appendix B text; the operator web UI shall offer only "Behoben – nochmal drucken" (with confirmation), and on it the booth shall send the copy again as a new CUPS job. No reconciliation is needed, since CUPS has already removed the job. `[user]` OD6, R9 | approved |
+| FR-5.18 | Must | When the backend cancels a copy's job with `0x0A` (`Incorrect media for job`), the copy shall go to `ERROR` (not `CANCELLED`) with the Appendix B text. The operator web UI offers only "Behoben – nochmal drucken" for it (FR-12b.4). `[user]` OD6, R9 | approved |
+| FR-5.20 | Must | On a confirmed "Behoben – nochmal drucken" (FR-5.18), the booth shall send the copy again as one new CUPS job. No reconciliation is needed, since CUPS has already removed the job. `[user]` OD6 (split from FR-5.18 v0.36) | approved |
+| FR-5.21 | Must | The stall limit for `SENT` (Appendix A `T_sent_to_layer1`) shall start when CUPS accepts the job; the image preparation before it (§8b) is not a tracker state and no stall limit runs during it. `[user]` (split from FR-7.21 v0.36) | approved |
 
 | ID | Precondition · stimulus | Expected observation | Must NOT happen | Tier |
 |---|---|---|---|---|
 | FR-5.1 | Simulated CUPS accepts · guest presses Drucken | `SENT` after acceptance | `SENT` before acceptance | unit |
 | FR-5.9 | Queue rejecting (`cupsreject`) · guest presses Drucken | `ERROR` with CUPS reason | "Druckauftrag gesendet" | integration |
 | FR-5.2 | `SENT` · inject Feeding Paper, YELLOW, MAGENTA, CYAN, LAMINATE | `FEEDING`, `LAYER_1`…`LAYER_4` in order | stage skipped or repeated | unit |
-| FR-5.2 | `LAYER_3` · inject `Printing MAGENTA` (as in a query hang, R14) | stays `LAYER_3` | `LAYER_2` | unit |
+| FR-5.19 | `LAYER_3` · inject `Printing MAGENTA` (as in a query hang, R14) | stays `LAYER_3`, message logged | `LAYER_2` | unit |
 | FR-5.3 | `LAYER_4` · inject `Print complete` | `DONE` | `DONE` before `LAYER_4` | unit |
 | FR-5.4 | `LAYER_1` · CUPS completed (simulated fast return on) | `AWAIT_OPERATOR`, cause *status unclear* | `DONE`; "Fertig" | unit |
 | FR-5.6 | any state but `DONE` · CUPS completed | no "Fertig" text | "Fertig" | unit |
@@ -286,9 +289,11 @@ Stage order: `SENT` < `FEEDING` < `LAYER_1` … `LAYER_4`. A skipped stage (e.g.
 | FR-5.11 | 3 copies · run copy 1 | only one CUPS job exists until copy 1 `DONE` | two jobs in CUPS at once | integration |
 | FR-5.12 | 3 copies, `ERROR` on copy 2 · operator "Foto ist da" | copy 3 sent without staff action | copy 3 lost or waits for staff | integration |
 | FR-5.13 | Job pending in simulated CUPS · restart booth | `AWAIT_OPERATOR`, queue stays disabled | job sent to printer | integration |
-| FR-5.14 | `ERROR` · simulated query reports printing → Idle | web UI shows "Drucker hat gedruckt" with time | evidence missing | unit |
+| FR-5.14 | `ERROR` · simulated query reports printing → Idle | evidence "printed" recorded with the times of *printing* and *Idle* | evidence missing; no timestamp | unit |
 | FR-5.15 | see §5.4 | | | integration + bench |
-| FR-5.18 | Simulated backend cancels with `Incorrect media for job (0a)` · operator "Behoben – nochmal drucken" | `ERROR` with "Falsche Papier- oder Farbkassette"; then one new job, copy printed once | `CANCELLED`; print screen closes; copy lost; two new jobs | integration |
+| FR-5.18 | Simulated backend cancels with `Incorrect media for job (0a)` | `ERROR` with "Falsche Papier- oder Farbkassette" | `CANCELLED`; print screen closes | integration |
+| FR-5.20 | `ERROR` after `0x0A` · operator "Behoben – nochmal drucken", confirmed | one new CUPS job, copy printed once | copy lost; two new jobs | integration |
+| FR-5.21 | Image preparation delayed 9 s in simulation · no backend message after `SENT` | `AWAIT_OPERATOR` (stall) T_sent_to_layer1 after CUPS accepted the job | stall raised before `SENT`; limit measured from the press of Drucken | integration |
 
 ### 5.4 Exactly-once contracts (full form)
 
@@ -372,10 +377,12 @@ Decides whether the booth accepts a new print request. There is no print queue: 
 | ID | Pri | Requirement | Status |
 |---|---|---|---|
 | FR-6.1 | Must | While a print request is unfinished (its last copy not `DONE` or `CANCELLED`), the booth shall reject new print requests. `[user]` | approved |
-| FR-6.12 | Must | While a CUPS printer error or `AWAIT_OPERATOR` is active, the booth shall reject new print requests. A supply count of 0 does not reject (FR-8.4). `[user]` | approved |
+| FR-6.12 | Must | While a CUPS printer error or `AWAIT_OPERATOR` is active, the booth shall reject new print requests. A supply count of 0 does not reject (FR-8.13). `[user]` | approved |
 | FR-6.8 | Must | The rejection shall be enforced on the server for every print entry point (result screen, gallery, any API call), regardless of when the page was loaded. `[user]` | approved |
-| FR-6.9 | Must | Print buttons on pages already open (result screen, gallery) shall show as disabled within {{T_ui}} of the booth becoming busy, and enabled again within {{T_ui}} of it becoming free. `[user]` | approved |
-| FR-6.10 | Must | A rejected request shall create no CUPS job and shall briefly show the guest the busy notice "Drucker beschäftigt – bitte warten, bis der aktuelle Druck fertig ist" (Appendix B). `[user]` OD5 | approved |
+| FR-6.9 | Must | Print buttons on pages already open (result screen, gallery) shall show as disabled within {{T_ui}} of the booth becoming busy. `[user]` | approved |
+| FR-6.16 | Must | Print buttons disabled by FR-6.9 shall show as enabled again within {{T_ui}} of the booth becoming free. `[user]` (split from FR-6.9 v0.36) | approved |
+| FR-6.10 | Must | A rejected request shall create no CUPS job. `[user]` OD5 | approved |
+| FR-6.17 | Must | A rejected request shall show the guest the busy notice "Drucker beschäftigt – bitte warten, bis der aktuelle Druck fertig ist" (Appendix B) within {{T_ui}} of the press, for {{T_busy_notice}}. `[user]` OD5 (split from FR-6.10 v0.36); duration v0.36 | approved |
 | FR-6.2 | Must | While printing is blocked by a CUPS printer error and no print request is unfinished, taking photos, showing the result and the QR code shall keep working. `[user]` (While a request is unfinished the print screen stays up, FR-7.14.) | approved |
 | FR-6.4 | Must | On an operator decision for a job in `ERROR` or `AWAIT_OPERATOR`, the booth shall first stop any printer status query, then make CUPS match the decision ("Foto ist da": cancel the job if still pending; "Foto fehlt": keep it), then re-enable the queue. `[user]` The same applies to an automatic decision (FR-6.15). | approved |
 | FR-6.11 | Must | Only the booth's reconciliation (FR-6.4) shall re-enable the CUPS queue; no other automatic `cupsenable` shall run. `[derived]` R3 | approved |
@@ -387,7 +394,9 @@ Decides whether the booth accepts a new print request. There is no print queue: 
 | FR-6.12 | Simulated `Ink Cassette Empty` · print request | rejected | CUPS job created | integration |
 | FR-6.8 | Gallery page loaded before the print started · press its print button while busy | rejected, notice shown | CUPS job created | integration |
 | FR-6.9 | Gallery open · start a print elsewhere | gallery print buttons disabled within T_ui | button stays active | integration |
-| FR-6.10 | Busy · press print | busy notice | CUPS job; silent nothing | integration |
+| FR-6.16 | Gallery open, buttons disabled · the print finishes (`DONE`, print screen closed) | buttons enabled within T_ui | buttons stay disabled | integration |
+| FR-6.10 | Busy · press print | no new job in CUPS or in the simulated SELPHY log | CUPS job created | integration |
+| FR-6.17 | Busy · press print | busy notice within T_ui of the press, gone T_busy_notice after it appeared (± T_ui) | no notice; notice stays; notice shorter than T_busy_notice | e2e |
 | FR-6.2 | Printer error, no request unfinished · guest takes a photo | photo + QR shown | photo flow blocked | integration |
 | FR-6.4 | see §5.4; query running · operator decides | query stopped before `cupsenable` | query and backend on the USB device at once | integration + bench |
 | FR-6.11 | Queue stopped by simulated backend · wait 5 min | queue stays stopped until operator decision | queue re-enabled by anything else | integration |
@@ -404,13 +413,14 @@ Decides whether the booth accepts a new print request. There is no print queue: 
 |---|---|---|---|
 | FR-7.1 | Must | After the guest presses Drucken, the print screen shall show the current stage of that request until the last copy is `DONE` or `CANCELLED`. `[user]` | approved |
 | FR-7.14 | Must | While a print request is unfinished, the print screen shall offer no way to leave it, including during `ERROR` and `AWAIT_OPERATOR`; no photo can be started until it closes. `[user]` (Staff opening the admin login on the laptop, FR-12b.20, is not a guest way out.) | approved |
-| FR-7.15 | Must | When the print screen closes after the last copy is `DONE`, the booth shall show the guest start screen within {{T_ui}}; the result view of that photo, with its print button, shall not be shown again. `[user]` | approved |
+| FR-7.15 | Must | When the print screen closes after the last copy is `DONE`, the booth shall show the guest start screen within {{T_ui}}. `[user]` | approved |
+| FR-7.22 | Must | After the print screen closes, the result view of that photo, with its print button, shall not be shown again. `[user]` (split from FR-7.15 v0.36) | approved |
 | FR-7.18 | Must | After the last copy of a request is `DONE` (single or multi-copy), the print screen shall show "Fertig – bitte Foto entnehmen" for {{T_take_hint}} and then close. `[user]` | approved |
 | FR-7.19 | Must | Between copies of a multi-copy request, the print screen shall show "Kopie k von N fertig – bitte Foto entnehmen" for {{T_take_hint}} and then send copy k+1, whether or not the photo has been taken. `[user]` A8 | approved |
 | FR-7.16 | Must | With `print.max_multi` > 1, the guest shall choose the number of copies in upstream's existing copies dialog (minus/plus, 1…`print.max_multi`, "Drucken" / "Abbrechen"; `assets/js/tools.js` `askCopies`). How the chosen number reaches the print stack is not yet decided. `print.max_multi` stays an admin-panel setting, unchanged. `[user]` | approved |
 | FR-7.17 | Must | Printing a photo again from the gallery shall stay possible, subject to the Busy Gate (§6); staff use it for reprints and can hide the gallery button in the admin panel. `[user]` | approved |
-| FR-7.21 | Must | From the press of Drucken (or the start of copy k+1, FR-7.19) until the copy's job is accepted by CUPS (`SENT`), the print screen shall show the `SENT` text "Druckauftrag gesendet (Kopie k von N)"; the image preparation (§8b) in that time is not a tracker state and no stall limit runs before `SENT`. `[user]` | approved |
-| FR-7.2 | Must | Stage changes shall appear on screen within {{T_ui}} of the event reaching the booth. | approved |
+| FR-7.21 | Must | From the press of Drucken (or the start of copy k+1, FR-7.19) until the copy's job is accepted by CUPS (`SENT`), the print screen shall show the `SENT` text "Druckauftrag gesendet (Kopie k von N)". `[user]` (stall limit before `SENT`: FR-5.21) | approved |
+| FR-7.2 | Must | Stage changes shall appear on screen within {{T_ui}} of the event reaching the booth. `[derived]` FR-7.1, T_ui | approved |
 | FR-7.3 | Must | All texts shall be German. `[user]` | approved |
 | FR-7.4 | Must | Layer stages shall be named yellow, magenta, cyan and **Schutzschicht** (clear coat; backend `LAMINATE`); the 4th stage shall never be called black/"Schwarz"/"K". `[user]` | approved |
 | FR-7.5 | Must | For a known CUPS error (Appendix B) the screen shall show its German cause. `[user]` | approved |
@@ -419,14 +429,15 @@ Decides whether the booth accepts a new print request. There is no print queue: 
 | FR-7.7 | Must | Each printer error in Appendix B shall have its own staff hint, telling the operator how to fix that error and to confirm on the phone whether the photo came out; for errors after which the printer prints the held photo by itself (A4), the hint says so and names the print button only as a fallback. `[user]` A4 (v0.19, replaces the single "press the print button" rule) | approved |
 | FR-7.10 | Must | With N > 1 copies the screen shall show "Kopie k von N". `[derived]` FR-5.11 | approved |
 | FR-7.12 | Should | After a page reload or browser restart during a print, the booth shall show the print screen again with the request's current stage, rebuilt from the tracker's state. `[user]` OD4 | approved |
-| FR-7.9 | Should | Exact German wording per Appendix B. | approved |
+| FR-7.9 | Should | The print screen texts shall match Appendix B word for word. `[user]` (approved in review v0.23) | approved |
 
 | ID | Precondition · stimulus | Expected observation | Must NOT happen | Tier |
 |---|---|---|---|---|
 | FR-7.1 | Full print | every stage shown, closes after "Fertig" | screen closes before `DONE` | integration |
-| FR-7.21 | Press Drucken, image preparation delayed 3 s in simulation | "Druckauftrag gesendet" within {{T_ui}} of the press, unchanged until `SENT` | empty or start screen during preparation; stall raised before `SENT` | integration |
+| FR-7.21 | Press Drucken, image preparation delayed 3 s in simulation | "Druckauftrag gesendet" within {{T_ui}} of the press, unchanged until `SENT` | empty or start screen during preparation | integration |
 | FR-7.14 | `ERROR` on copy 1 · tap everywhere on the screen, swipe, press keys | print screen stays; no photo starts | screen closes; start screen or photo countdown reachable | integration |
-| FR-7.15 | Full print · "Fertig" screen closes | start screen shown within T_ui | result view of that photo shown; its print button pressable | integration |
+| FR-7.15 | Full print · "Fertig" screen closes | start screen shown within T_ui | another screen shown first; start screen later than T_ui | integration |
+| FR-7.22 | Full print · "Fertig" screen closes, then browser back and a reload | start screen | result view of that photo shown; its print button pressable | integration |
 | FR-7.18 | Single print | "Fertig – bitte Foto entnehmen" for T_take_hint, then start screen | screen stays; closes early | e2e |
 | FR-7.19 | 2 copies · copy 1 `DONE`, photo not taken | "Kopie 1 von 2 fertig – bitte Foto entnehmen" for T_take_hint, then copy 2 sent | screen closes after copy 1; copy 2 waits for the photo to be taken | e2e |
 | FR-7.16 | `print.max_multi` = 3 · press Drucken, choose 2, confirm | 2 copies printed in sequence | more than 3 selectable; dialog skipped | integration |
@@ -458,30 +469,43 @@ Tracks how much paper is left in the tray and how many prints are left on the in
 |---|---|---|---|
 | FR-8.1 | Must | The booth shall keep two counts, *paper left* and *prints left on the ink cassette*, and lower both by one when a copy reaches `DONE` (`Print complete` or "Foto ist da"). Apart from FR-8.10 and operator corrections (FR-8.3), no other event shall lower them. `[user]` | approved |
 | FR-8.2 | Must | When either count reaches {{LOW_THRESHOLD}}, the operator web UI and the print screen (as a staff notice) shall show a warning ("Papier fast leer – noch n Blatt" / "Farbkassette fast leer – noch n Drucke"). `[user]` | approved |
-| FR-8.3 | Must | On the operator web UI the operator shall be able to: set *paper left* after refilling by entering the number of sheets now in the tray; set *prints left* after changing the cassette (defaults offered: 18 sheets per paper tray, 56 prints per ink cassette `[user]` OD3, from photobooth-setup `paper-ink-counter.md`; the operator can always enter the real number); and correct either count at any time. Each change is logged (FR-14.1). `[user]` | approved |
-| FR-8.4 | Must | When *paper left* or *prints left* reaches 0, the operator web UI shall show a refill warning and the print screen a staff notice ("Papier laut Zähler leer" / "Farbkassette laut Zähler leer"); printing shall **not** be blocked: if the tray or cassette is really empty, the printer's own error stops the print (Appendix B). Counts shall not go below 0. `[user]` | approved |
+| FR-8.3 | Must | On the operator web UI the operator shall be able to set *paper left* at any time by entering the number of sheets now in the tray, with 18 (one full paper tray) offered as the default. `[user]` OD3 (defaults from photobooth-setup `paper-ink-counter.md`) | approved |
+| FR-8.11 | Must | On the operator web UI the operator shall be able to set *prints left* at any time by entering a number, with 56 (one full ink cassette) offered as the default. `[user]` OD3 (split from FR-8.3 v0.36) | approved |
+| FR-8.12 | Must | Every change of a count by the operator shall be logged (FR-14.1). `[user]` (split from FR-8.3 v0.36) | approved |
+| FR-8.4 | Must | When *paper left* or *prints left* reaches 0, the operator web UI shall show a refill warning and the print screen a staff notice ("Papier laut Zähler leer" / "Farbkassette laut Zähler leer"). `[user]` | approved |
+| FR-8.13 | Must | A count of 0 shall not block printing: if the tray or cassette is really empty, the printer's own error stops the print (Appendix B). `[user]` (split from FR-8.4 v0.36) | approved |
+| FR-8.14 | Must | Counts shall not go below 0. `[user]` (split from FR-8.4 v0.36) | approved |
 | FR-8.5 | Must | The counts shall survive a booth restart and a page reload unchanged. `[derived]` | approved |
 | FR-8.6 | Must | On `Paper Feed (02)`, the booth shall show "Papier leer" when *paper left* is 0 and "Papiereinzug gestört" when it is greater than 0 (Appendix B); with an unknown count, the combined text. `[derived]` R1 | approved |
 | FR-8.7 | Must | While a count is unknown (never set since installation), it shall be shown as "unbekannt", with no warning and no block. `[derived]` | approved |
 | FR-8.8 | Must | Upstream's print limit shall be off (`print.limit` = 0) on the booth; photobooth-setup shall set it so. `[user]` | approved |
-| FR-8.9 | Should | The operator web UI shall show both counts at all times, also while idle. | approved |
-| FR-8.10 | Must | After an operator decision "Foto fehlt", the operator web UI shall ask "Blatt verbraucht?" with "Ja" / "Nein". "Ja" lowers *paper left* by one, and *prints left* by one if `LAYER_1` (`Printing YELLOW`) was reported for that copy (the ink panels are then assumed used, A7); "Nein" changes nothing. The resend of the copy shall not wait for the answer (FR-5.12); an unanswered question changes nothing and is dropped when the request finishes. `[user]` | approved |
+| FR-8.9 | Should | The operator web UI shall show both counts at all times, also while idle. `[user]` (approved in review v0.23) | approved |
+| FR-8.10 | Must | After an operator decision "Foto fehlt", the operator web UI shall ask "Blatt verbraucht?" with "Ja" / "Nein"; the question is dropped when the request finishes. `[user]` | approved |
+| FR-8.15 | Must | "Ja" shall lower *paper left* by one, and *prints left* by one if `LAYER_1` (`Printing YELLOW`) was reported for that copy (the ink panels are then assumed used, A7). `[user]` (split from FR-8.10 v0.36) | approved |
+| FR-8.16 | Must | "Nein", or no answer before the request finishes, shall leave both counts unchanged. `[user]` (split from FR-8.10 v0.36) | approved |
+| FR-8.17 | Must | The resend of the copy (FR-5.12) shall not wait for the answer to "Blatt verbraucht?". `[user]` (split from FR-8.10 v0.36) | approved |
 
 | ID | Precondition · stimulus | Expected observation | Must NOT happen | Tier |
 |---|---|---|---|---|
 | FR-8.1 | Paper 10 · one print reaches `DONE` | paper 9, prints 9 | count lowered at `SENT` or on CUPS completed before `LAYER_4` | integration |
 | FR-8.1 | Paper 10 · print stops with `Paper Feed (02)`, operator "Foto fehlt", resent, `DONE` | paper 9 | paper 8 | integration |
 | FR-8.2 | LOW_THRESHOLD 3, paper 4 · one print | warning on phone and print screen | no warning; guest-style error | e2e |
-| FR-8.3 | Phone · "Papier nachgefüllt: 18" | paper 18, change logged | count unchanged; not logged | e2e |
-| FR-8.4 | Paper 0 · guest presses Drucken | print sent; refill warning on the phone, staff notice on the print screen | print refused; count −1 | e2e |
-| FR-8.4 | Paper 1, 2 copies requested, 3 sheets really in the tray | both copies printed; paper 0 after copy 1, stays 0 | copy 2 held back; count negative | integration |
+| FR-8.3 | Phone · "Papier nachgefüllt", accept the default; then enter 12 during a print | paper 18, then 12 | count unchanged; entry refused during a print | e2e |
+| FR-8.11 | Phone · "Farbkassette gewechselt", accept the default; then enter 30 | prints 56, then 30 | count unchanged | e2e |
+| FR-8.12 | Phone · set paper 18, then prints 30 | two log entries with time, new value and source operator | change not logged | integration |
+| FR-8.4 | Paper 1 · one print reaches `DONE` | refill warning on the phone, staff notice on the print screen | no warning; guest-style error | e2e |
+| FR-8.13 | Paper 0 · guest presses Drucken | print sent and printed | print refused | e2e |
+| FR-8.13 | Paper 1, 2 copies requested, 3 sheets really in the tray | both copies printed | copy 2 held back | integration |
+| FR-8.14 | Paper 1, 2 copies printed | paper 0 after copy 1, stays 0 after copy 2 | count negative | unit |
 | FR-8.5 | Paper 7 · restart booth | paper 7 | reset to 0 or unknown | integration |
 | FR-8.6 | Paper 0 / paper 5 · `Paper Feed (02)` | "Papier leer" / "Papiereinzug gestört" | combined text with a known count | unit |
 | FR-8.7 | Fresh install · print | prints; counts "unbekannt" | blocked | integration |
 | FR-8.8 | Booth after photobooth-setup run | `print.limit` = 0 | any other value | integration |
-| FR-8.10 | Paper 10, prints 10, `Paper jam (0b)` in `LAYER_2` · operator "Foto fehlt", then "Blatt verbraucht?" → Ja | paper 9, prints 9 before the resent copy; 8/8 after it | question blocks the resend; counts lowered without "Ja" | e2e |
-| FR-8.10 | Paper 10, `Paper Feed (02)` in `SENT` (no layer reported) · "Foto fehlt" → Ja | paper 9, prints 10 | prints lowered | unit |
-| FR-8.10 | "Foto fehlt" → Nein, or no answer until the request is done | counts unchanged; question gone | counts lowered | e2e |
+| FR-8.10 | `ERROR` · operator "Foto fehlt", confirmed; then the request finishes unanswered | "Blatt verbraucht?" with Ja / Nein shown; gone when the request finishes | no question; question stays after the request | e2e |
+| FR-8.15 | Paper 10, prints 10, `Paper jam (0b)` in `LAYER_2` · "Foto fehlt" → Ja | paper 9, prints 9 before the resent copy; 8/8 after it | counts unchanged; lowered twice | e2e |
+| FR-8.15 | Paper 10, `Paper Feed (02)` in `SENT` (no layer reported) · "Foto fehlt" → Ja | paper 9, prints 10 | prints lowered | unit |
+| FR-8.16 | "Foto fehlt" → Nein, or no answer until the request is done | counts unchanged | counts lowered | e2e |
+| FR-8.17 | "Foto fehlt" confirmed, question left open | copy resent within T_resume of the confirmation | resend waits for the answer | integration |
 | FR-8.9 | Paper 12, prints 40 · open the printer status page while idle, then during a print and in `ERROR` | both counts visible in every state without opening a menu, tab or dialog | counts hidden while idle; shown only after a print | integration |
 
 ## 8b. Print Image
@@ -500,14 +524,16 @@ Reference implementation: `testing/bench/prescale-for-selphy.py` (B-1). Preparin
 |---|---|---|---|
 | FR-8b.1 | Must | The CUPS raster of each copy shall be pixel-identical to its prepared image (1248 × 1871 px at 300 dpi, FR-8b.3), i.e. CUPS shall not scale or resample it. `[user]` | approved |
 | FR-8b.2 | Must | The prepared image shall fill the whole raster with the photo, centred, with no letterbox bars and no change of the photo's aspect ratio. `[user]` | approved |
-| FR-8b.4 | Must | When preparing a copy's image fails, or takes longer than {{T_prepare}}, the booth shall send that copy as upstream does (its print image with `fit-to-page` and `landscape`) and log a warning with the cause (FR-14.1); FR-8b.1 does not apply to that copy. `[user]` | approved |
+| FR-8b.4 | Must | When preparing a copy's image fails, or takes longer than {{T_prepare}}, the booth shall send that copy as upstream does (its print image with `fit-to-page` and `landscape`); FR-8b.1 does not apply to that copy. `[user]` | approved |
+| FR-8b.5 | Must | Each fallback of FR-8b.4 shall be logged as a warning with its cause (FR-14.1). `[user]` (split from FR-8b.4 v0.36) | approved |
 | FR-8b.3 | Must | The prepared image shall be made from the image upstream's print path would send to CUPS (the photo with any print frame, text or QR code already applied) with this algorithm, as tested in B-1: (1) apply the EXIF orientation; (2) if an ICC profile is embedded, convert to sRGB; (3) rotate landscape to portrait (90°); (4) centre crop to 1248 : 1871 in source pixels; (5) resample to 1248 × 1871 with Lanczos (Pillow `LANCZOS`, kernel widened by the reduction factor); (6) unsharp mask radius 0.8 px, amount 60 %, threshold 2; (7) save as PNG, 300 dpi. `[user]` | approved |
 
 | ID | Precondition · stimulus | Expected observation | Must NOT happen | Tier |
 |---|---|---|---|---|
 | FR-8b.1 | 4509 × 3052 booth JPEG · prepare, then `cupsfilter` with the `selphy` PPD and the booth's `lp` options | raster 1248 × 1871, maximum pixel difference to the image 0 | any raster pixel differs; raster of another size | integration |
 | FR-8b.2 | Landscape 3:2, landscape 4:3 and portrait photos · prepare | 1248 × 1871, no uniform border row or column, aspect of the crop box within 0.1 % of 1248 : 1871 `[user]` | white or black bars; stretched image | unit |
-| FR-8b.4 | Unreadable print image, and separately a preparation stopped after {{T_prepare}} · print | copy sent once by the upstream path, printed, warning with cause logged | copy not printed; printed twice; silent fallback | integration |
+| FR-8b.4 | Unreadable print image, and separately a preparation stopped after {{T_prepare}} · print | copy sent once by the upstream path, printed | copy not printed; printed twice | integration |
+| FR-8b.5 | Same two cases | one warning each, naming the cause (unreadable / timeout) | silent fallback; cause missing | integration |
 | FR-8b.3 | Fixed reference photo set incl. EXIF orientation 6 and an embedded Adobe RGB profile · prepare | output equals the reference implementation's output (same Pillow version), maximum difference ≤ 1 per channel `[user]` | other resampling filter; orientation or colour profile ignored | unit |
 
 ---
@@ -526,16 +552,20 @@ Delivers, for the `selphy` queue: whether a job was accepted, each job's state (
 
 | ID | Pri | Requirement | Status |
 |---|---|---|---|
-| FR-9.1 | Must | Shall report job acceptance or refusal for each print request. | approved |
+| FR-9.1 | Must | Shall report job acceptance or refusal for each print request. `[derived]` FR-5.1, FR-5.9 | approved |
 | FR-9.2 | Must | Shall report printer errors with the CUPS/Gutenprint message text (e.g. `Paper Feed (02)`), including when the backend has stopped the queue. `[code]` | approved |
 | FR-9.3 | Must | Shall distinguish completed, cancelled and aborted jobs (not `lpstat -W completed`, which lists cancelled jobs too). `[code]` | approved |
 | FR-9.4 | Must | A failed printer status read while a job is processing shall not be reported as a printer error. `[code]` R2 | approved |
-| FR-9.5 | Must | A printer error shall reach the tracker within {{T_cups_poll}}. | approved |
+| FR-9.5 | Must | A printer error shall reach the tracker within {{T_cups_poll}}. `[derived]` FR-7.5, T_cups_poll | approved |
 | FR-9.6 | Must | Shall report a job left pending in a stopped queue as pending, so reconciliation (FR-6.4) can find it. `[code]` R3 | approved |
-| FR-9.10 | Must | Shall deliver the backend's printer-state messages for the active job (`Feeding Paper`, `Printing YELLOW/MAGENTA/CYAN/LAMINATE`, `Print complete`) to the tracker within {{T_cups_poll}}, tagged with the job ID they belong to; unknown messages are delivered as such and logged. `[user]` §2.3 | approved |
-| FR-9.7 | Must | While the queue is stopped and a copy is in `ERROR` or `AWAIT_OPERATOR`, shall start the next printer status query {{T_printer_poll}} after the previous one ended (answered, failed or stopped, FR-9.9); never while the queue is enabled, a CUPS backend is attached to the printer, or `cupsenable` runs. `[user]` R14 | approved |
-| FR-9.8 | Must | From the printer status query, shall report only: *printing* (any `Feeding Paper` / `Printing …` state), *idle*, *error* (with text), *no answer*; and per held copy whether printing was seen and then *idle* followed (= *printed*), or *idle* followed without printing (= *nothing printed*). Layer names from the query shall not be used. `[derived]` R14 | approved |
-| FR-9.9 | Must | A query that hangs or fails (e.g. `libusb error -7`) shall be reported as *no answer*, never as a printer error; a query running longer than {{T_query_hang}} shall be stopped and retried. `[code]` R14 | approved |
+| FR-9.10 | Must | Shall deliver the backend's printer-state messages for the active job (`Feeding Paper`, `Printing YELLOW/MAGENTA/CYAN/LAMINATE`, `Print complete`) to the tracker within {{T_cups_poll}}, tagged with the job ID they belong to. `[user]` §2.3 | approved |
+| FR-9.14 | Must | A backend message not in that list shall be delivered to the tracker as *unknown*, with its text, and logged. `[user]` §2.3 (split from FR-9.10 v0.36) | approved |
+| FR-9.7 | Must | While the queue is stopped and a copy is in `ERROR` or `AWAIT_OPERATOR`, shall start the next printer status query {{T_printer_poll}} after the previous one ended (answered, failed or stopped, FR-9.13). `[user]` R14 | approved |
+| FR-9.11 | Must | No printer status query shall run while the queue is enabled, a CUPS backend is attached to the printer, or `cupsenable` runs. `[user]` R14 (split from FR-9.7 v0.36) | approved |
+| FR-9.8 | Must | From the printer status query, shall report only: *printing* (any `Feeding Paper` / `Printing …` state), *idle*, *error* (with text), *no answer*; layer names from the query shall not be used. `[derived]` R14 | approved |
+| FR-9.12 | Must | Per held copy, shall report *printed* when *printing* was seen and *idle* followed, and *nothing printed* when *idle* followed without *printing*. `[derived]` R14 (split from FR-9.8 v0.36) | approved |
+| FR-9.9 | Must | A query that hangs or fails (e.g. `libusb error -7`) shall be reported as *no answer*, never as a printer error. `[code]` R14 | approved |
+| FR-9.13 | Must | A query running longer than {{T_query_hang}} shall be stopped, and the next one started per FR-9.7. `[code]` R14 (split from FR-9.9 v0.36) | approved |
 
 | ID | Precondition · stimulus | Expected observation | Must NOT happen | Tier |
 |---|---|---|---|---|
@@ -546,11 +576,15 @@ Delivers, for the `selphy` queue: whether a job was accepted, each job's state (
 | FR-9.5 | Inject printer error | tracker sees it within T_cups_poll | later | integration |
 | FR-9.6 | Queue stopped, job pending | job reported pending | job missing | integration |
 | FR-9.10 | Simulated backend emits the P-1 job 119 message sequence | each message reaches the tracker with job ID within T_cups_poll | message lost; wrong job | integration |
-| FR-9.7 | Queue enabled, print running | no printer status query runs | query while the backend is attached | integration |
-| FR-9.7 | Queue stopped by an error | each query starts T_printer_poll ± 10 % after the previous one ended; queries stop when the operator decides | gap outside 0.9–1.1 s; no query; query after `cupsenable` | integration |
-| FR-9.8 | Simulated query: Feeding, Printing, Idle | *printed* reported | layer stage shown from the query | unit |
-| FR-9.8 | Simulated query: Idle only (power cycle) | *nothing printed* | *printed* | unit |
-| FR-9.9 | Simulated query hangs 17 s | *no answer*, retried after T_query_hang | printer error shown | unit |
+| FR-9.14 | Simulated backend emits `Printing BLACK` (not in the list) | delivered as *unknown* with its text, logged; stage unchanged | message dropped; mapped to a stage | unit |
+| FR-9.11 | Queue enabled, print running | no printer status query runs | query while the backend is attached | integration |
+| FR-9.11 | Queue stopped, query running · operator decides | query stopped before `cupsenable` runs; none after it | query during or after `cupsenable` | integration |
+| FR-9.7 | Queue stopped by an error | each query starts T_printer_poll ± 10 % after the previous one ended | gap outside 0.9–1.1 s; no query | integration |
+| FR-9.8 | Simulated query: `Printing MAGENTA` | *printing* reported | layer name reported or shown | unit |
+| FR-9.12 | Simulated query: Feeding, Printing, Idle | *printed* reported | *nothing printed* | unit |
+| FR-9.12 | Simulated query: Idle only (power cycle) | *nothing printed* | *printed* | unit |
+| FR-9.9 | Simulated query hangs 17 s, then fails with `libusb error -7` | *no answer* for both | printer error shown | unit |
+| FR-9.13 | Simulated query hangs 40 s | stopped T_query_hang after it started; next query T_printer_poll later | query left running; no new query | unit |
 
 §10 (Unit Interface), §11 (ESP32 Sensor Unit) and §12 (Operator Panel) were removed in v0.16; see `fsd-esp32-v0.15.md`. FR-10.7 and FR-10.8 continue as FR-12b.17 and FR-12b.18.
 
@@ -569,21 +603,36 @@ Access reuses upstream's admin login `[user]`: the operator opens the login page
 | FR-12b.1 | Must | Shall be reachable from a phone browser on the booth Wi-Fi through the upstream login page, whose address is printed on a label inside the booth; no app installed. `[user]` | approved |
 | FR-12b.2 | Must | Shall use the upstream admin login (`login/`, username/password or keypad PIN as configured, with upstream's login throttling); without a valid admin session the printer status page shall show nothing and accept no decision, and shall send the browser to the login page. `[user]` R11 | approved |
 | FR-12b.13 | Must | The upstream menu after login (`login/menu.php`) shall show a "Drucker" button that opens the printer status page, under the same condition as the admin panel button. `[user]` | approved |
-| FR-12b.14 | Must | A login on the phone shall stay valid for at least 24 h (upstream: 48 h, `lib/boot.php` `[code]`); the printer status page shall not log the operator out by itself. (Upstream's menu page logs out after 60 s `[code]`; that stays on the menu only.) `[user]` | approved |
-| FR-12b.15 | Should | The printer status page shall have a link back to the menu. | approved |
-| FR-12b.3 | Must | Shall show: current stage, copy k of N, the full CUPS error text with the Appendix B guest text and staff hint, the last backend message, the evidence of FR-5.14 with timestamps (incl. the printer status query result and *no answer* periods), and whether the CUPS queue is stopped. `[user]` | approved |
-| FR-12b.4 | Must | While a copy is in `ERROR` or `AWAIT_OPERATOR`, shall offer "Foto ist da" and "Foto fehlt" (for `0x0A` only "Behoben – nochmal drucken", FR-5.18); a decision shall be sent only after a second confirmation step naming the copy ("Kopie 2 von 3: Foto ist da – bestätigen?"). `[user]` | approved |
+| FR-12b.14 | Must | A login on the phone shall stay valid for at least 24 h (upstream: 48 h, `lib/boot.php` `[code]`). `[user]` | approved |
+| FR-12b.33 | Must | The printer status page shall not log the operator out by itself. (Upstream's menu page logs out after 60 s `[code]`; that stays on the menu only.) `[user]` (split from FR-12b.14 v0.36) | approved |
+| FR-12b.15 | Should | The printer status page shall have a link back to the menu. `[user]` (approved in review v0.23) | approved |
+| FR-12b.3 | Must | Shall show the current stage and copy k of N. `[user]` | approved |
+| FR-12b.26 | Must | During a CUPS error, shall show the full CUPS error text with the Appendix B guest text and staff hint. `[user]` (split from FR-12b.3 v0.36) | approved |
+| FR-12b.27 | Must | Shall show the last backend message. `[user]` (split from FR-12b.3 v0.36) | approved |
+| FR-12b.28 | Must | Shall show the evidence of FR-5.14 with timestamps, including the printer status query results and *no answer* periods. `[user]` (split from FR-12b.3 v0.36) | approved |
+| FR-12b.29 | Must | Shall show whether the CUPS queue is stopped. `[user]` (split from FR-12b.3 v0.36) | approved |
+| FR-12b.4 | Must | While a copy is in `ERROR` or `AWAIT_OPERATOR`, shall offer "Foto ist da" and "Foto fehlt" (for `0x0A` only "Behoben – nochmal drucken", FR-5.18). `[user]` | approved |
+| FR-12b.25 | Must | A decision shall be sent only after a second confirmation step naming the copy ("Kopie 2 von 3: Foto ist da – bestätigen?"). `[user]` (split from FR-12b.4 v0.36) | approved |
 | FR-12b.17 | Must | The booth shall accept an operator decision only while a copy is in `ERROR` or `AWAIT_OPERATOR`. `[derived]` (was FR-10.7) | approved |
-| FR-12b.18 | Must | For each copy in `ERROR` or `AWAIT_OPERATOR`, only the first confirmed decision shall be applied, from whichever browser it came; a later decision for the same copy shall be ignored and logged, and every open printer status page shall show the decision that was applied. `[derived]` R12 (was FR-10.8) | approved |
-| FR-12b.6 | Must | Shall update within {{T_ui}} of a state change without a manual reload. | approved |
-| FR-12b.7 | Must | When the page loses its connection to the booth, it shall say so ("Keine Verbindung zur Booth") and offer no decisions until it is connected again and shows current data. | approved |
-| FR-12b.9 | Must | Texts German; layout for phone width (360 CSS px, no horizontal scrolling); every button, link and switch at least 48×48 CSS px. `[user]` (sizes v0.33) | approved |
+| FR-12b.18 | Must | For each copy in `ERROR` or `AWAIT_OPERATOR`, only the first confirmed decision shall be applied, from whichever browser it came. `[derived]` R12 (was FR-10.8) | approved |
+| FR-12b.34 | Must | A later decision for the same copy shall be ignored and logged. `[derived]` R12 (split from FR-12b.18 v0.36) | approved |
+| FR-12b.35 | Must | Every open printer status page shall show the decision that was applied, within {{T_ui}}. `[derived]` R12 (split from FR-12b.18 v0.36) | approved |
+| FR-12b.6 | Must | Shall update within {{T_ui}} of a state change without a manual reload. `[derived]` FR-12b.3, T_ui | approved |
+| FR-12b.7 | Must | When the page loses its connection to the booth, it shall show "Keine Verbindung zur Booth" within {{T_ui}}. `[user]` (approved in review v0.23) | approved |
+| FR-12b.30 | Must | While not connected, and until it is connected again and shows current data, the page shall offer no decisions. `[user]` (split from FR-12b.7 v0.36) | approved |
+| FR-12b.9 | Must | All printer status page texts shall be German. `[user]` | approved |
+| FR-12b.31 | Must | The page shall fit a 360 CSS px wide viewport without horizontal scrolling. `[user]` (split from FR-12b.9 v0.36) | approved |
+| FR-12b.32 | Must | Every button, link and switch shall be at least 48×48 CSS px. `[user]` (split from FR-12b.9 v0.36) | approved |
 | FR-12b.10 | Should | Shall list the print requests since the booth service last started: requested, printed and failed copies, and each operator decision; older requests are found in the logs (FR-14.2). `[user]` (boundary v0.33) | approved |
-| FR-12b.11 | Must | Shall show the supply counts, let the operator set and correct them, and ask "Blatt verbraucht?" after "Foto fehlt" (FR-8.2, FR-8.3, FR-8.9, FR-8.10). `[user]` | approved |
+| FR-12b.11 | Must | The supply counter functions of §8 (counts and warnings FR-8.2, 8.4, 8.9; entry FR-8.3, 8.11; "Blatt verbraucht?" FR-8.10) shall be on the printer status page itself. `[user]` (v0.36: stated as one obligation, the functions are in §8) | approved |
 | FR-12b.12 | Must | Shall not offer actions beyond those in this section (no cancelling jobs, no re-enabling the queue directly, FR-6.11). `[derived]` R3 | approved |
 | FR-12b.20 | Must | The printer status page shall also be usable on the booth laptop itself, reached the same way as on the phone (admin login → menu → "Drucker"), with the same content, decisions and confirmation step; no hidden gesture or separate staff screen. `[user]` OD12 | approved |
 | FR-12b.19 | Should | Shall show a warning when the startup check finds `FAST_RETURN=0` missing (NFR-13.4): "Druckstatus unzuverlässig – FAST_RETURN nicht gesetzt". `[derived]` R2 | approved |
-| FR-12b.21 | Must | The printer status page shall have a switch "Automatisch fortsetzen" (auto-resume, FR-6.15) on / off (manual resume). Default on; the setting survives a booth restart, applies from the next decision (a copy already waiting is evaluated again when it is switched on), is logged with time and browser, and is shown on every open printer status page. `[user]` OD13 | approved |
+| FR-12b.21 | Must | The printer status page shall have a switch "Automatisch fortsetzen" (auto-resume, FR-6.15) on / off (manual resume), on by default. `[user]` OD13 | approved |
+| FR-12b.36 | Must | The switch setting shall survive a booth restart. `[user]` OD13 (split from FR-12b.21 v0.36) | approved |
+| FR-12b.37 | Must | A change of the switch shall apply from the next decision; when it is switched on, a copy already waiting shall be evaluated again. `[user]` OD13 (split from FR-12b.21 v0.36) | approved |
+| FR-12b.38 | Must | Each change of the switch shall be logged with time and browser. `[user]` OD13 (split from FR-12b.21 v0.36) | approved |
+| FR-12b.39 | Must | Every open printer status page shall show the current switch setting within {{T_ui}} of a change. `[user]` OD13 (split from FR-12b.21 v0.36) | approved |
 | FR-12b.22 | Must | When the operator chooses "Foto fehlt" and the latest printer status query result is anything other than *Idle* with no printer error (error still active, *printing*, *no answer*, or no result yet), the printer status page shall show the power-cycle prompt (Appendix C) instead of the normal confirmation. `[user]` R18 | approved |
 | FR-12b.23 | Must | After the power-cycle prompt (FR-12b.22), the booth shall apply "Foto fehlt" only when the operator confirms that the printer was switched off and on; closing the prompt leaves the copy in its state. `[user]` R18 | approved |
 | FR-12b.24 | Must | A "Foto fehlt" applied through the power-cycle prompt shall be logged with the operator's power-cycle confirmation (FR-14.1). `[user]` R18 | approved |
@@ -593,17 +642,30 @@ Access reuses upstream's admin login `[user]`: the operator opens the login page
 | FR-12b.2 | Not logged in · open the printer status page directly | sent to login page | status or decisions shown | integration |
 | FR-12b.2 | Not logged in · POST a decision to the booth | refused, logged | decision applied | integration |
 | FR-12b.13 | Log in on the phone | menu shows "Drucker" next to gallery and admin panel; tapping it opens the printer status page | button missing; button shown without login (phone) | integration |
-| FR-12b.14 | Logged in, printer status page open for 30 min | still logged in, page still updating | logout; login page shown | integration |
-| FR-12b.3 | `ERROR` on copy 2/3, `Paper Feed (02)`, printer query reports printed after the error | all listed fields shown, evidence with time | missing field | integration |
-| FR-12b.4 | `ERROR` · tap "Foto ist da", no confirmation | nothing sent | decision sent on first tap | integration |
+| FR-12b.14 | Logged in · simulated clock advanced 24 h, open the printer status page | page shown, still logged in | login page shown | integration |
+| FR-12b.33 | Logged in, printer status page open for 30 min | still logged in, page still updating | logout; login page shown | integration |
+| FR-12b.3 | Copy 2 of 3 in `LAYER_2` | "Magenta wird gedruckt (2/4)", "Kopie 2 von 3" | stage or count missing or stale | integration |
+| FR-12b.26 | `ERROR` `Paper Feed (02)`, paper count 5 | raw "Paper Feed (02)", "Papiereinzug gestört" and its staff hint | raw text, guest text or hint missing | integration |
+| FR-12b.27 | `LAYER_3` | "Printing CYAN" shown as last backend message | missing; an older message | integration |
+| FR-12b.28 | `ERROR` · simulated query: printing, 17 s hang, Idle | each result with its time, the *no answer* period with start and end | entry or time missing | integration |
+| FR-12b.29 | `ERROR`, queue stopped; then queue re-enabled after a decision | "Druckwarteschlange angehalten", then gone | stopped queue not shown; shown after re-enable | integration |
+| FR-12b.4 | `ERROR` `Paper Feed (02)` / `ERROR` after `0x0A` | "Foto ist da" and "Foto fehlt" / only "Behoben – nochmal drucken" | other decisions offered | integration |
 | FR-12b.4 | `LAYER_2` · open page | no decisions offered | decisions offered | integration |
+| FR-12b.25 | `ERROR` · tap "Foto ist da", no confirmation; then confirm | nothing sent on the tap; sent after confirming, naming the copy | decision sent on first tap | integration |
 | FR-12b.17 | `LAYER_2` · POST "Foto ist da" | ignored, logged | `DONE` | unit |
-| FR-12b.18 | `ERROR`, two phones · phone A "Foto ist da", phone B "Foto fehlt" 1 s later | `DONE`, job not resent; phone B shows "Bereits entschieden: Foto ist da" | copy resent; duplicate photo | integration |
+| FR-12b.18 | `ERROR`, two phones · phone A "Foto ist da", phone B "Foto fehlt" 1 s later | `DONE`, job not resent | copy resent; duplicate photo | integration |
+| FR-12b.34 | Same scenario | phone B's decision logged as ignored | B's decision applied or not logged | integration |
+| FR-12b.35 | Same scenario, a third page open | phone B and the third page show "Bereits entschieden: Foto ist da" within T_ui | page shows the decision buttons still | integration |
 | FR-12b.6 | Page open · inject layer message | new stage within T_ui, no reload | stale stage | integration |
-| FR-12b.7 | Page open, `ERROR` · cut the connection | "Keine Verbindung zur Booth", decision buttons gone | decision sent from stale page | integration |
+| FR-12b.7 | Page open · cut the connection | "Keine Verbindung zur Booth" within T_ui | page silent; stale data shown as current | integration |
+| FR-12b.30 | Page open, `ERROR` · cut the connection, restore it | decision buttons gone while cut; back only after fresh data arrived | decision sent from stale page | integration |
 | FR-12b.12 | Any state | no cancel / enable buttons | queue re-enabled from the web UI | integration |
 | FR-12b.20 | Booth browser, `ERROR`, Wi-Fi off · admin login on the laptop → menu → "Drucker" → "Foto ist da", confirm | decision applied; queue re-enabled; guest print screen continues afterwards | page needs the phone; decision refused | e2e |
-| FR-12b.21 | Switch auto-resume off on the phone · restart booth | still off on every printer page; next error waits for the operator | reset to on; automatic decision | integration |
+| FR-12b.21 | Fresh install · open printer status page | switch shown, on | switch missing; off | integration |
+| FR-12b.36 | Switch auto-resume off on the phone · restart booth | still off; next error waits for the operator | reset to on; automatic decision | integration |
+| FR-12b.37 | Switch off, copy waiting in `ERROR` with clean *printed* evidence · switch on | copy decided "Foto ist da" automatically | copy left waiting | integration |
+| FR-12b.38 | Switch off on phone A, on on phone B | two log entries with time and browser | change not logged; browser missing | integration |
+| FR-12b.39 | Two pages open · switch off on one | other page shows off within T_ui | other page stale | integration |
 | FR-12b.22 | `ERROR` `Paper Feed (02)`, simulated query: error still active · operator "Foto fehlt" | power-cycle prompt | normal confirmation shown; copy resent | integration |
 | FR-12b.22 | `ERROR`, simulated query: *Idle*, no error · operator "Foto fehlt" | normal confirmation (Appendix C), copy resent once after it | power-cycle prompt shown | integration |
 | FR-12b.23 | Power-cycle prompt shown · operator confirms "aus- und eingeschaltet" | "Foto fehlt" applied, copy resent once | copy resent before the confirmation; resent twice | integration |
@@ -611,7 +673,9 @@ Access reuses upstream's admin login `[user]`: the operator opens the login page
 | FR-12b.24 | Prompt confirmed | log entry for the decision carries the power-cycle confirmation, time and browser | decision logged without it | unit |
 | FR-12b.1 | Mobile browser (360×800 viewport) on the booth network, nothing installed · open `login/`, log in, menu → "Drucker" | printer status page shown | app, plugin or desktop browser needed | e2e |
 | FR-12b.1 | Real booth, operator phone on the booth Wi-Fi · type the address from the label inside the booth | upstream login page loads | label missing or its address wrong | bench |
-| FR-12b.9 | 360×800 viewport · every printer status page state (idle, printing, `ERROR` with decisions, confirmation, power-cycle prompt, "Blatt verbraucht?", counter entry) | all text German (Appendix C; raw CUPS message excepted); page width ≤ 360 px; every button, link and switch ≥ 48×48 CSS px | English text; horizontal scrolling; a target under 48 px in either dimension | e2e |
+| FR-12b.9 | Every printer status page state (idle, printing, `ERROR` with decisions, confirmation, power-cycle prompt, "Blatt verbraucht?", counter entry) | all text German (Appendix C; raw CUPS message excepted) | English text | e2e |
+| FR-12b.31 | 360×800 viewport · same states | page width ≤ 360 px | horizontal scrolling | e2e |
+| FR-12b.32 | 360×800 viewport · same states | every button, link and switch ≥ 48×48 CSS px | a target under 48 px in either dimension | e2e |
 | FR-12b.10 | Booth started · request 1 printed; request 2 with 2 copies, copy 1 `Paper Feed (02)` → "Foto fehlt" → resent → both `DONE` | list: request 1 1 requested / 1 printed; request 2 2 requested / 2 printed / 1 failed, decision "Foto fehlt" with time | request missing; failed copy counted as printed; decision missing | integration |
 | FR-12b.10 | After that scenario · restart the booth service | list empty; both requests still in the logs | requests from before the restart listed; logs lost | integration |
 | FR-12b.11 | Printer status page, idle · set paper 18 and prints 50, then correct paper to 17; then `ERROR` → "Foto fehlt" confirmed | page shows 17 / 50; "Blatt verbraucht?" shown on the same page | counts only settable outside this page; question missing | e2e |
@@ -628,7 +692,7 @@ Configured, not owned: the `selphy` queue (photobooth-setup `native/setup-printe
 
 | ID | Pri | Requirement | Status |
 |---|---|---|---|
-| NFR-13.1 | Must | Queue options stay identical between Docker (`cups/entrypoint.sh`) and native (`setup-printer.sh`). `[code]` | approved |
+| NFR-13.1 | Must | The queue options set by Docker (`cups/entrypoint.sh`) and by the native install (`setup-printer.sh`) shall be identical. `[code]` | approved |
 | NFR-13.2 | Must | The Gutenprint backend shall run with `FAST_RETURN=0` (`SetEnv FAST_RETURN 0` in `cups-files.conf`, §4.3), so it stays attached for the whole print and reports stages and errors during it. `[derived]` R2 | approved (B-Q1: 4 clean prints, §17.3.2; R7) |
 | NFR-13.3 | Must | Printing and the print screen shall keep working when the booth router or its Wi-Fi is down; only the operator web UI on the phone is lost (fallback: FR-12b.20). `[derived]` R10 | approved |
 | NFR-13.4 | Should | At startup the booth shall check that `cups-files.conf` sets `FAST_RETURN 0` and log a warning otherwise (FR-12b.19). `[derived]` R2 | approved |
@@ -649,7 +713,7 @@ Configured, not owned: the `selphy` queue (photobooth-setup `native/setup-printe
 
 | ID | Pri | Requirement | Status |
 |---|---|---|---|
-| FR-14.1 | Must | Every stage change, backend message, error, printer status query result and operator decision shall be logged with timestamp, job ID, copy k of N and source (CUPS/backend/printer query/operator/timeout); ignored decisions (FR-12b.17, FR-12b.18) included. | approved |
+| FR-14.1 | Must | Every stage change, backend message, error, printer status query result and operator decision shall be logged with timestamp, job ID, copy k of N and source (CUPS/backend/printer query/operator/timeout); ignored decisions (FR-12b.17, FR-12b.34) included. `[derived]` FR-14.2, FR-5.14 | approved |
 | FR-14.2 | Should | Logs shall let staff reconstruct after an event how many copies were requested, printed, and failed. `[derived]` event findings | approved |
 
 | ID | Precondition · stimulus | Expected observation | Must NOT happen | Tier |
@@ -663,16 +727,18 @@ Threat model: physical booth at a private event; the operator web UI on the boot
 
 | ID | Pri | Requirement | Status |
 |---|---|---|---|
-| NFR-15.1 | Must | The booth Wi-Fi shall use WPA2 or WPA3, and its password shall appear on no guest-visible screen, QR code, gallery page or label. `[user]` (narrowed v0.33; who may know the password is an operating rule for the user manual) | approved |
-| NFR-15.2 | Must | The operator web UI shall require the upstream admin login (FR-12b.2), also from the booth Wi-Fi; at events `login.enabled` and admin protection (`protect.admin`) shall be on. A localhost exception for the booth laptop itself (`protect.localhost_admin` off) is allowed, as for the admin panel. `[derived]` R11 | approved |
+| NFR-15.1 | Must | The booth Wi-Fi shall use WPA2 or WPA3. `[user]` (narrowed v0.33; who may know the password is an operating rule in the user manual) | approved |
+| NFR-15.5 | Must | The booth Wi-Fi password shall appear on no guest-visible screen, QR code, gallery page or label. `[user]` (split from NFR-15.1 v0.36) | approved |
+| NFR-15.2 | Must | The operator web UI shall require the upstream admin login (FR-12b.2), also from the booth Wi-Fi. A localhost exception for the booth laptop itself (`protect.localhost_admin` off) is allowed, as for the admin panel. `[derived]` R11 | approved |
+| NFR-15.6 | Must | At events, `login.enabled` and admin protection (`protect.admin`) shall be on. `[derived]` R11 (split from NFR-15.2 v0.36) | approved |
 | NFR-15.3 | Must | The operator web UI shall not be reachable from the internet (no port forwarding, not exposed through the public photo/QR host). `[derived]` | approved |
-| NFR-15.4 | Must | The few commands the print stack needs as root (the printer status query) may run as root without a password, each as a fixed command line with no arguments taken from the web side, all listed in one dedicated sudoers drop-in file (`NOPASSWD`) that photobooth-setup installs; no other root permission is granted to the web server user. `[user]` R14 | approved |
+| NFR-15.4 | Must | The web server user shall have passwordless root rights only for the fixed command lines the print stack needs (the printer status query), with no arguments taken from the web side, all listed in one dedicated sudoers drop-in file (`NOPASSWD`) that photobooth-setup installs. `[user]` R14 | approved |
 
 | ID | Precondition · stimulus | Expected observation | Must NOT happen | Tier |
 |---|---|---|---|---|
 | NFR-15.1 | Real booth router · scan the booth Wi-Fi from a phone and read the router's security setting | WPA2 or WPA3 | open, WEP or WPA1 | bench |
-| NFR-15.1 | Real booth · walk every guest page (start, result, gallery, QR) and decode every QR code shown; check the booth labels | booth Wi-Fi password found nowhere; no `WIFI:` QR for the booth network | password shown, encoded or printed for guests | bench |
-| NFR-15.2 | Booth configured for an event · read the config | `login.enabled` and `protect.admin` both on | either off | integration |
+| NFR-15.5 | Real booth · walk every guest page (start, result, gallery, QR) and decode every QR code shown; check the booth labels | booth Wi-Fi password found nowhere; no `WIFI:` QR for the booth network | password shown, encoded or printed for guests | bench |
+| NFR-15.6 | Booth configured for an event · read the config | `login.enabled` and `protect.admin` both on | either off | integration |
 | NFR-15.2 | Second host on the booth network (not localhost), no session · open the printer status page and POST a decision | login page; decision refused | status shown; decision applied | integration |
 | NFR-15.3 | Real booth at the event site · from a device off the booth network (mobile data), request the printer status page and decision endpoint via the public photo/QR host and the router's WAN address | no response or 404; no printer data | page or decision endpoint reachable | bench |
 | NFR-15.4 | Booth after a photobooth-setup run · `sudo -l -U <web server user>`; list `/etc/sudoers.d/` | only the fixed printer-query command line(s), `NOPASSWD`, all from the one drop-in file | any other root command; wildcards or arguments; a rule outside the drop-in | integration |
@@ -846,6 +912,10 @@ Logs on the laptop: `~/b1-*-20261127-*` (printer serial redacted in the copied `
 7. Two phones decide the same error within a few seconds: only the first decision is applied, no duplicate (FR-12b.18).
 8. Paper counter: load 3 sheets and enter 3 on the phone; print 3 photos — low warning shown, count 0 → refill warning on the phone, the 4th request still prints and stops with "Papier leer" (FR-8.6); refill, enter 18, the printer prints the held photo, operator confirms; empty the tray with the count at 5 → "Papiereinzug gestört" shown, as expected for a wrong count (FR-8.6).
 9. `FAST_RETURN` line removed from `cups-files.conf`, CUPS restarted: warning on the phone (NFR-13.4); a print goes to `AWAIT_OPERATOR`, never "Fertig" early (FR-5.4). Restore the line afterwards.
+10. The phone on the booth Wi-Fi opens the login page from the address on the booth label (FR-12b.1, bench row).
+11. The backend stays attached until `Print complete` in the prints of item 1 (NFR-13.2, bench row).
+12. Booth Wi-Fi scanned: WPA2 or WPA3 (NFR-15.1); every guest page and QR code checked: no Wi-Fi password (NFR-15.5).
+13. With the booth router connected to the internet as at an event: the printer status page and the decision endpoint are not reachable from mobile data, through the public photo/QR host or the router's WAN address (NFR-15.3).
 
 ### 17.5 Upstream characterisation (print limit, auto-print, rate limit)
 
@@ -916,6 +986,7 @@ How reliable the printer status query and auto-resume (FR-6.15) are gets checked
 | `T_prepare` | max time to prepare a copy's print image (§8b) before falling back (FR-8b.4) | **10 s** `[user]` (B-1: 2.6 s on the booth laptop) |
 | `T_ui` | max delay from event to screen (booth screen and operator web UI), and for print buttons to change state | **2 s** `[user]` |
 | `T_resume` | max delay from operator confirmation to queue enabled (incl. stopping a running printer query) | **5 s** `[user]` |
+| `T_busy_notice` | how long the busy notice stays on screen (FR-6.17) | **3 s** `[user]` (v0.36) |
 | `LOW_THRESHOLD` | supply count at which the low warning starts (not a timing value; FR-8.2) | **3** `[user]` |
 | `T_cups_completed` | send → CUPS *completed*: ~17 s observed with fast return on `[code]`; with `FAST_RETURN=0` | observation, not a limit: **56.6–57.1 s** with `FAST_RETURN=0` (B-1, 3 prints; 1.2–1.3 s after the eject); fast return on: 10.4 s (P-1) |
 
@@ -995,7 +1066,7 @@ The panel texts (old Appendix C, first table) were removed with the panel in v0.
 
 ```yaml
 document_status: draft
-fsd_version: 0.35
+fsd_version: 0.36
 repository: starkerflamingo32/photobooth (branch booth)
 baseline_commit: e8c2cbd3
 applicable_firmware_version: n/a (no ESP32 unit since v0.16)
@@ -1113,6 +1184,13 @@ change_history:
       Method/project/test-infrastructure.md, pointers left under the same numbers; phase 3 has no phase dependency
   - 2026-11-27 v0.35: FR-7.15 start screen within T_ui [user]; FR-9.7 / T_printer_poll: 1 s ± 10 % from the end of
       one query to the start of the next [user]
+  - 2026-11-27 v0.36: gate fixes — 24 compound requirements split, original IDs keep their first obligation,
+      35 new IDs (FR-5.19–5.21, 6.16–6.17, 7.22, 8.11–8.17, 8b.5, 9.11–9.14, 12b.25–12b.39, NFR-15.5–15.6), contracts
+      split to match; FR-5.14 and FR-5.18 UI parts point to FR-12b.28 / FR-12b.4 instead of restating them;
+      FR-6.17 busy notice for T_busy_notice 3 s [user]; provenance added to FR-7.2, 7.9, 8.9, 9.1, 9.5, 12b.6,
+      12b.7, 12b.15, 14.1; "shall" wording for FR-7.9, 12b.9, NFR-13.1, 15.4; state model: E15 "Behoben" column,
+      "—" defined, auto-resume as a source of E10/E11; Phase 4 includes installing the stack on the laptop and
+      depends on Phases 2 and 3; §17.4 items 10–13 for the bench-tier contracts
 superseded_requirements:
   # v0.30
   - FR-12b.22 v0.29 (prompt, apply-after-confirm and logging in one) — FR-12b.22, 12b.23, 12b.24
