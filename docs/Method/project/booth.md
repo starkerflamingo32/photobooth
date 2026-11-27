@@ -11,9 +11,10 @@
 ## Upstream code
 
 - Upstream's contribution rules apply to code in this fork: [`../../contributing.md`](../../contributing.md).
-- *(proposed, awaiting the booth owner)* Booth components go in their own files. Where upstream code must change (e.g. the "Drucker" button in
+- `[user]` Booth components go in their own files. Where upstream code must change (e.g. the "Drucker" button in
   `login/menu.php`, the print entry points behind the Busy Gate), the change is the smallest hook that calls into
-  booth code, so upstream merges stay small.
+  booth code, so upstream merges stay small. A hook is as small as the change allows; replacing a whole upstream flow
+  (e.g. the guest print screen) takes a larger one.
 - Upstream workflows the fork does not need are disabled, not deleted
   ([test infrastructure → GitHub Actions plan](test-infrastructure.md#github-actions-plan)).
 
