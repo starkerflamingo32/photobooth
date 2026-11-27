@@ -77,7 +77,9 @@ Print 3: put the paper tray in **empty**. Print 4: take the **ink cassette out**
    Only if nothing happens for 1 minute: press the printer's print button, then `b`.
 5. Photo out: **B:** Ctrl-C (always **before** any `cupsenable`). **A:** `q`.
 
-**Duplicate check** (no paper used):
+**Duplicate check** (B-Q5; answered in P-1 and B-1 print 3, so later runs can skip it and end as
+the booth does: Ctrl-C in **B**, `q`, `sudo cancel -a selphy`, `sudo cupsenable selphy` — nothing
+prints, as in B-1 print 4):
 
 6. **A:** `./cups-poll-test.sh watch ~/b1-p3-empty-tray-*`
 7. Pull the paper tray out, then press `t` in **A**.
