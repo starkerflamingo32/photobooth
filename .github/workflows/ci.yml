@@ -1,0 +1,41 @@
+# Booth fork: lint and unit tier on every push / PR to booth (FSD §17.2).
+name: ci
+
+on:
+  push:
+    branches: [booth]
+  pull_request:
+    branches: [booth]
+  workflow_dispatch:
+
+jobs:
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          submodules: true
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+      - run: npm install
+      - name: Build (as upstream build.yml)
+        run: npm run build
+      - run: composer cgl:ci
+      - run: composer lint
+      - run: composer phpstan -- --error-format=github
+      - run: composer phpunit
+      - run: npm run eslint
+      - name: Test plan coverage
+        run: |
+          pip install pyyaml==6.0.2
+          python testing/tools/test_plan.py coverage >> "$GITHUB_STEP_SUMMARY"
+      - name: Shellcheck test scripts
+        run: shellcheck testing/run.sh testing/stack/cups-sim/sim-entrypoint.sh

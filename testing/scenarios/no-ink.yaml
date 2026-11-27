@@ -1,0 +1,3 @@
+id: no-ink
+description: Ink cassette removed (P-1 job 122, B-1 job 127) - No Ink (07); printed by itself after reinserting.
+printer: {ink: missing}

@@ -1,0 +1,3 @@
+id: tray-missing
+description: Paper tray removed (P-1 job 120 duplicate check) - No Paper (03).
+printer: {tray: missing}

@@ -1,0 +1,2228 @@
+# Test plan (Method → test infrastructure, test plan). One entry per FSD contract row.
+# IDs are stable and never reused. status/last_run are set from real runs only
+# (testing/tools/test_plan.py record); coverage is generated (test_plan.py coverage).
+tests:
+- id: T-17.1-a
+  verifies:
+  - §17.1
+  contract: normal print with FAST_RETURN=0 reports the B-1 stage sequence
+  tier: integration
+  file: testing/e2e/tests/integration/simulator.spec.ts
+  scenario: null
+  status: written
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-17.1-b
+  verifies:
+  - §17.1
+  contract: without FAST_RETURN=0 the backend leaves at Printing YELLOW (P-1 job 118)
+  tier: integration
+  file: testing/e2e/tests/integration/simulator.spec.ts
+  scenario: null
+  status: written
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-17.1-c
+  verifies:
+  - §17.1
+  contract: paper/tray/ink errors stop the queue, job pending, held photo printed after the fix
+  tier: integration
+  file: testing/e2e/tests/integration/simulator.spec.ts
+  scenario: null
+  status: written
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-17.1-d
+  verifies:
+  - §17.1
+  contract: 'cupsenable after the self-print resends the job: duplicate in the job log (R3)'
+  tier: integration
+  file: testing/e2e/tests/integration/simulator.spec.ts
+  scenario: null
+  status: written
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-17.1-e
+  verifies:
+  - §17.1
+  contract: 'ink sheet error 0c: power cycle loses the photo (P-1 job 123)'
+  tier: integration
+  file: testing/e2e/tests/integration/simulator.spec.ts
+  scenario: null
+  status: written
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-17.1-f
+  verifies:
+  - §17.1
+  contract: 'incorrect media 0a: job cancelled, queue keeps running (R9)'
+  tier: integration
+  file: testing/e2e/tests/integration/simulator.spec.ts
+  scenario: null
+  status: written
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-17.1-g
+  verifies:
+  - §17.1
+  contract: a held job cancelled in CUPS is still printed (R18)
+  tier: integration
+  file: testing/e2e/tests/integration/simulator.spec.ts
+  scenario: null
+  status: written
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-17.1-h
+  verifies:
+  - §17.1
+  contract: printer status query answers as the real -s (R14)
+  tier: integration
+  file: testing/e2e/tests/integration/simulator.spec.ts
+  scenario: null
+  status: written
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-17.1-i
+  verifies:
+  - §17.1
+  contract: printer status query hangs with libusb error -7 (R14)
+  tier: integration
+  file: testing/e2e/tests/integration/simulator.spec.ts
+  scenario: null
+  status: written
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-17.1-j
+  verifies:
+  - §17.1
+  contract: query while the queue is enabled is recorded as a violation
+  tier: integration
+  file: testing/e2e/tests/integration/simulator.spec.ts
+  scenario: null
+  status: written
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-17.1-k
+  verifies:
+  - §17.1
+  contract: 'booth browser: take a photo and print it; exactly one job reaches the simulated SELPHY'
+  tier: e2e
+  file: testing/e2e/tests/e2e/booth-smoke.spec.ts
+  scenario: null
+  status: written
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-17.1-l
+  verifies:
+  - §17.1
+  contract: 'browser roles: admin, operator phone and stale page open the booth in parallel'
+  tier: e2e
+  file: testing/e2e/tests/e2e/booth-smoke.spec.ts
+  scenario: null
+  status: written
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-5-a
+  verifies:
+  - FR-5.1
+  contract: Simulated CUPS accepts · guest presses Drucken → `SENT` after acceptance
+  tier: unit
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-5-b
+  verifies:
+  - FR-5.9
+  contract: Queue rejecting (`cupsreject`) · guest presses Drucken → `ERROR` with CUPS reason
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-5-c
+  verifies:
+  - FR-5.2
+  contract: '`SENT` · inject Feeding Paper, YELLOW, MAGENTA, CYAN, LAMINATE → `FEEDING`, `LAYER_1`…`LAYER_4` in order'
+  tier: unit
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-5-d
+  verifies:
+  - FR-5.19
+  contract: '`LAYER_3` · inject `Printing MAGENTA` (as in a query hang, R14) → stays `LAYER_3`, message logged'
+  tier: unit
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-5-e
+  verifies:
+  - FR-5.3
+  contract: '`LAYER_4` · inject `Print complete` → `DONE`'
+  tier: unit
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-5-f
+  verifies:
+  - FR-5.4
+  contract: '`LAYER_1` · CUPS completed (simulated fast return on) → `AWAIT_OPERATOR`, cause *status unclear*'
+  tier: unit
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-5-g
+  verifies:
+  - FR-5.6
+  contract: any state but `DONE` · CUPS completed → no "Fertig" text
+  tier: unit
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-5-h
+  verifies:
+  - FR-5.5
+  contract: '`SENT` · no layer message for > limit → `AWAIT_OPERATOR`/stall within limit +2 s'
+  tier: unit
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-5-i
+  verifies:
+  - FR-5.11
+  contract: 3 copies · run copy 1 → only one CUPS job exists until copy 1 `DONE`
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-5-j
+  verifies:
+  - FR-5.12
+  contract: 3 copies, `ERROR` on copy 2 · operator "Foto ist da" → copy 3 sent without staff action
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-5-k
+  verifies:
+  - FR-5.13
+  contract: Job pending in simulated CUPS · restart booth → `AWAIT_OPERATOR`, queue stays disabled
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-5-l
+  verifies:
+  - FR-5.14
+  contract: '`ERROR` · simulated query reports printing → Idle → evidence "printed" recorded with the times of *printing* and *Idle*'
+  tier: unit
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-5-m
+  verifies:
+  - FR-5.15
+  contract: 'see §5.4 → '
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-5-n
+  verifies:
+  - FR-5.15
+  contract: 'see §5.4 → '
+  tier: bench
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-5-o
+  verifies:
+  - FR-5.18
+  contract: Simulated backend cancels with `Incorrect media for job (0a)` → `ERROR` with "Falsche Papier- oder Farbkassette"
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-5-p
+  verifies:
+  - FR-5.20
+  contract: '`ERROR` after `0x0A` · operator "Behoben – nochmal drucken", confirmed → one new CUPS job, copy printed once'
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-5-q
+  verifies:
+  - FR-5.21
+  contract: Image preparation delayed 9 s in simulation · no backend message after `SENT` → `AWAIT_OPERATOR` (stall) T_sent_to_layer1 after CUPS accepted the job
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-6-a
+  verifies:
+  - FR-6.1
+  contract: Print running · 2nd print request via API → rejected
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-6-b
+  verifies:
+  - FR-6.12
+  contract: Simulated `Ink Cassette Empty` · print request → rejected
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-6-c
+  verifies:
+  - FR-6.8
+  contract: Gallery page loaded before the print started · press its print button while busy → rejected, notice shown
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-6-d
+  verifies:
+  - FR-6.9
+  contract: Gallery open · start a print elsewhere → gallery print buttons disabled within T_ui
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-6-e
+  verifies:
+  - FR-6.16
+  contract: Gallery open, buttons disabled · the print finishes (`DONE`, print screen closed) → buttons enabled within T_ui
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-6-f
+  verifies:
+  - FR-6.10
+  contract: Busy · press print → no new job in CUPS or in the simulated SELPHY log
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-6-g
+  verifies:
+  - FR-6.17
+  contract: Busy · press print → busy notice within T_ui of the press, gone T_busy_notice after it appeared (± T_ui)
+  tier: e2e
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-6-h
+  verifies:
+  - FR-6.2
+  contract: Printer error, no request unfinished · guest takes a photo → photo + QR shown
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-6-i
+  verifies:
+  - FR-6.4
+  contract: see §5.4; query running · operator decides → query stopped before `cupsenable`
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-6-j
+  verifies:
+  - FR-6.4
+  contract: see §5.4; query running · operator decides → query stopped before `cupsenable`
+  tier: bench
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-6-k
+  verifies:
+  - FR-6.11
+  contract: Queue stopped by simulated backend · wait 5 min → queue stays stopped until operator decision
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-6-l
+  verifies:
+  - FR-6.15
+  contract: 'Auto-resume on, `Paper Feed (02)` · simulated query: printing, Idle, no hang → "Foto ist da" applied automatically, job cancelled, queue re-enabled; phone shows "Automatisch entschieden: Foto ist da – Drucker hat gedruckt"'
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-6-m
+  verifies:
+  - FR-6.15
+  contract: 'Auto-resume on, `Unknown Error (0c)` · query: no answer (power cycle), then Idle, no printing → "Foto fehlt" applied automatically, copy printed once'
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-6-n
+  verifies:
+  - FR-6.15
+  contract: 'Auto-resume on · query: printing, 17 s hang, Idle → operator asked'
+  tier: unit
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-6-o
+  verifies:
+  - FR-6.15
+  contract: 'Auto-resume off · query: printing, Idle → evidence shown, operator asked'
+  tier: unit
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-7-a
+  verifies:
+  - FR-7.1
+  contract: Full print → every stage shown, closes after "Fertig"
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-7-b
+  verifies:
+  - FR-7.21
+  contract: Press Drucken, image preparation delayed 3 s in simulation → "Druckauftrag gesendet" within {{T_ui}} of the press, unchanged until `SENT`
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-7-c
+  verifies:
+  - FR-7.14
+  contract: '`ERROR` on copy 1 · tap everywhere on the screen, swipe, press keys → print screen stays; no photo starts'
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-7-d
+  verifies:
+  - FR-7.15
+  contract: Full print · "Fertig" screen closes → start screen shown within T_ui
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-7-e
+  verifies:
+  - FR-7.22
+  contract: Full print · "Fertig" screen closes, then browser back and a reload → start screen
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-7-f
+  verifies:
+  - FR-7.18
+  contract: Single print → "Fertig – bitte Foto entnehmen" for T_take_hint, then start screen
+  tier: e2e
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-7-g
+  verifies:
+  - FR-7.19
+  contract: 2 copies · copy 1 `DONE`, photo not taken → "Kopie 1 von 2 fertig – bitte Foto entnehmen" for T_take_hint, then copy 2 sent
+  tier: e2e
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-7-h
+  verifies:
+  - FR-7.16
+  contract: '`print.max_multi` = 3 · press Drucken, choose 2, confirm → 2 copies printed in sequence'
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-7-i
+  verifies:
+  - FR-7.16
+  contract: Copies dialog open · press Abbrechen → no print request
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-7-j
+  verifies:
+  - FR-7.17
+  contract: Photo printed before, booth idle · print it from the gallery → printed once more
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-7-k
+  verifies:
+  - FR-7.4
+  contract: '`LAYER_4` → "Schutzschicht"'
+  tier: unit
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-7-l
+  verifies:
+  - FR-7.5
+  contract: CUPS reason `Ink Cassette Empty (06)` → "Farbkassette leer"
+  tier: unit
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-7-m
+  verifies:
+  - FR-7.6
+  contract: CUPS reason `Unknown Error (08)` → generic text + "Unknown Error (08)"
+  tier: unit
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-7-n
+  verifies:
+  - FR-7.7
+  contract: Each Appendix B printer error → its own hint as in Appendix B, ending with confirming on the phone
+  tier: unit
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-7-o
+  verifies:
+  - FR-7.10
+  contract: 3 copies, copy 2 printing → "Kopie 2 von 3"
+  tier: unit
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-7-p
+  verifies:
+  - FR-7.2
+  contract: Print screen open, `LAYER_1` · simulated backend emits `Printing MAGENTA` → "Magenta wird gedruckt (2/4)" within T_ui of the message reaching the tracker, without a reload
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-7-q
+  verifies:
+  - FR-7.3
+  contract: Walk every print screen state (each Appendix B stage, error, information text and the busy rejection) · collect all visible text → every string is German (Appendix B); only the raw CUPS line of FR-7.6 may be English
+  tier: e2e
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-7-r
+  verifies:
+  - FR-7.9
+  contract: Each Appendix B row · render its state (k, N, n filled in) → text equals the Appendix B text character for character
+  tier: unit
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-7-s
+  verifies:
+  - FR-7.12
+  contract: 2 copies, copy 1 in `LAYER_3` · reload the page; separately, close and restart the browser → print screen back within T_ui of the page loading, showing "Cyan wird gedruckt (3/4)" and "Kopie 1 von 2"
+  tier: e2e
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-7-t
+  verifies:
+  - FR-7.12
+  contract: '`ERROR` `No Paper (03)` · reload the page → guest text and staff hint shown again; still no way out (FR-7.14)'
+  tier: e2e
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-7-u
+  verifies:
+  - FR-7.13
+  contract: Each known error in Appendix B · show it on the print screen → its own staff hint from Appendix B shown with the guest text
+  tier: unit
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-8-a
+  verifies:
+  - FR-8.1
+  contract: Paper 10 · one print reaches `DONE` → paper 9, prints 9
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-8-b
+  verifies:
+  - FR-8.1
+  contract: Paper 10 · print stops with `Paper Feed (02)`, operator "Foto fehlt", resent, `DONE` → paper 9
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-8-c
+  verifies:
+  - FR-8.2
+  contract: LOW_THRESHOLD 3, paper 4 · one print → warning on phone and print screen
+  tier: e2e
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-8-d
+  verifies:
+  - FR-8.3
+  contract: Phone · "Papier nachgefüllt", accept the default; then enter 12 during a print → paper 18, then 12
+  tier: e2e
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-8-e
+  verifies:
+  - FR-8.11
+  contract: Phone · "Farbkassette gewechselt", accept the default; then enter 30 → prints 56, then 30
+  tier: e2e
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-8-f
+  verifies:
+  - FR-8.12
+  contract: Phone · set paper 18, then prints 30 → two log entries with time, new value and source operator
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-8-g
+  verifies:
+  - FR-8.4
+  contract: Paper 1 · one print reaches `DONE` → refill warning on the phone, staff notice on the print screen
+  tier: e2e
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-8-h
+  verifies:
+  - FR-8.13
+  contract: Paper 0 · guest presses Drucken → print sent and printed
+  tier: e2e
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-8-i
+  verifies:
+  - FR-8.13
+  contract: Paper 1, 2 copies requested, 3 sheets really in the tray → both copies printed
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-8-j
+  verifies:
+  - FR-8.14
+  contract: Paper 1, 2 copies printed → paper 0 after copy 1, stays 0 after copy 2
+  tier: unit
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-8-k
+  verifies:
+  - FR-8.5
+  contract: Paper 7 · restart booth → paper 7
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-8-l
+  verifies:
+  - FR-8.6
+  contract: Paper 0 / paper 5 · `Paper Feed (02)` → "Papier leer" / "Papiereinzug gestört"
+  tier: unit
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-8-m
+  verifies:
+  - FR-8.7
+  contract: Fresh install · print → prints; counts "unbekannt"
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-8-n
+  verifies:
+  - FR-8.8
+  contract: Booth after photobooth-setup run → `print.limit` = 0
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-8-o
+  verifies:
+  - FR-8.10
+  contract: '`ERROR` · operator "Foto fehlt", confirmed; then the request finishes unanswered → "Blatt verbraucht?" with Ja / Nein shown; gone when the request finishes'
+  tier: e2e
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-8-p
+  verifies:
+  - FR-8.15
+  contract: Paper 10, prints 10, `Paper jam (0b)` in `LAYER_2` · "Foto fehlt" → Ja → paper 9, prints 9 before the resent copy; 8/8 after it
+  tier: e2e
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-8-q
+  verifies:
+  - FR-8.15
+  contract: Paper 10, `Paper Feed (02)` in `SENT` (no layer reported) · "Foto fehlt" → Ja → paper 9, prints 10
+  tier: unit
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-8-r
+  verifies:
+  - FR-8.16
+  contract: '"Foto fehlt" → Nein, or no answer until the request is done → counts unchanged'
+  tier: e2e
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-8-s
+  verifies:
+  - FR-8.17
+  contract: '"Foto fehlt" confirmed, question left open → copy resent within T_resume of the confirmation'
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-8-t
+  verifies:
+  - FR-8.9
+  contract: Paper 12, prints 40 · open the printer status page while idle, then during a print and in `ERROR` → both counts visible in every state without opening a menu, tab or dialog
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-8b-a
+  verifies:
+  - FR-8b.1
+  contract: 4509 × 3052 booth JPEG · prepare, then `cupsfilter` with the `selphy` PPD and the booth's `lp` options → raster 1248 × 1871, maximum pixel difference to the image 0
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-8b-b
+  verifies:
+  - FR-8b.2
+  contract: 'Landscape 3:2, landscape 4:3 and portrait photos · prepare → 1248 × 1871, no uniform border row or column, aspect of the crop box within 0.1 % of 1248 : 1871 `[user]`'
+  tier: unit
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-8b-c
+  verifies:
+  - FR-8b.4
+  contract: Unreadable print image, and separately a preparation stopped after {{T_prepare}} · print → copy sent once by the upstream path, printed
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-8b-d
+  verifies:
+  - FR-8b.5
+  contract: Same two cases → one warning each, naming the cause (unreadable / timeout)
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-8b-e
+  verifies:
+  - FR-8b.3
+  contract: Fixed reference photo set incl. EXIF orientation 6 and an embedded Adobe RGB profile · prepare → output equals the reference implementation's output (same Pillow version), maximum difference ≤ 1 per channel `[user]`
+  tier: unit
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-9-a
+  verifies:
+  - FR-9.1
+  contract: Simulated queue accepting / rejecting → acceptance / refusal reported
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-9-b
+  verifies:
+  - FR-9.2
+  contract: Simulated backend stops queue with `Paper Feed (02)` → error with that text
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-9-c
+  verifies:
+  - FR-9.3
+  contract: One job each completed, cancelled, aborted → three distinct states
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-9-d
+  verifies:
+  - FR-9.4
+  contract: Status read fails while processing → no error reported
+  tier: unit
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-9-e
+  verifies:
+  - FR-9.5
+  contract: Inject printer error → tracker sees it within T_cups_poll
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-9-f
+  verifies:
+  - FR-9.6
+  contract: Queue stopped, job pending → job reported pending
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-9-g
+  verifies:
+  - FR-9.10
+  contract: Simulated backend emits the P-1 job 119 message sequence → each message reaches the tracker with job ID within T_cups_poll
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-9-h
+  verifies:
+  - FR-9.14
+  contract: Simulated backend emits `Printing BLACK` (not in the list) → delivered as *unknown* with its text, logged; stage unchanged
+  tier: unit
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-9-i
+  verifies:
+  - FR-9.11
+  contract: Queue enabled, print running → no printer status query runs
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-9-j
+  verifies:
+  - FR-9.11
+  contract: Queue stopped, query running · operator decides → query stopped before `cupsenable` runs; none after it
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-9-k
+  verifies:
+  - FR-9.7
+  contract: Queue stopped by an error → each query starts T_printer_poll ± 10 % after the previous one ended
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-9-l
+  verifies:
+  - FR-9.8
+  contract: 'Simulated query: `Printing MAGENTA` → *printing* reported'
+  tier: unit
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-9-m
+  verifies:
+  - FR-9.12
+  contract: 'Simulated query: Feeding, Printing, Idle → *printed* reported'
+  tier: unit
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-9-n
+  verifies:
+  - FR-9.12
+  contract: 'Simulated query: Idle only (power cycle) → *nothing printed*'
+  tier: unit
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-9-o
+  verifies:
+  - FR-9.9
+  contract: Simulated query hangs 17 s, then fails with `libusb error -7` → *no answer* for both
+  tier: unit
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-9-p
+  verifies:
+  - FR-9.13
+  contract: Simulated query hangs 40 s → stopped T_query_hang after it started; next query T_printer_poll later
+  tier: unit
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-a
+  verifies:
+  - FR-12b.2
+  contract: Not logged in · open the printer status page directly → sent to login page
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-b
+  verifies:
+  - FR-12b.2
+  contract: Not logged in · POST a decision to the booth → refused, logged
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-c
+  verifies:
+  - FR-12b.13
+  contract: Log in on the phone → menu shows "Drucker" next to gallery and admin panel; tapping it opens the printer status page
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-d
+  verifies:
+  - FR-12b.14
+  contract: Logged in · simulated clock advanced 24 h, open the printer status page → page shown, still logged in
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-e
+  verifies:
+  - FR-12b.33
+  contract: Logged in, printer status page open for 30 min → still logged in, page still updating
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-f
+  verifies:
+  - FR-12b.3
+  contract: Copy 2 of 3 in `LAYER_2` → "Magenta wird gedruckt (2/4)", "Kopie 2 von 3"
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-g
+  verifies:
+  - FR-12b.26
+  contract: '`ERROR` `Paper Feed (02)`, paper count 5 → raw "Paper Feed (02)", "Papiereinzug gestört" and its staff hint'
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-h
+  verifies:
+  - FR-12b.27
+  contract: '`LAYER_3` → "Printing CYAN" shown as last backend message'
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-i
+  verifies:
+  - FR-12b.28
+  contract: '`ERROR` · simulated query: printing, 17 s hang, Idle → each result with its time, the *no answer* period with start and end'
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-j
+  verifies:
+  - FR-12b.29
+  contract: '`ERROR`, queue stopped; then queue re-enabled after a decision → "Druckwarteschlange angehalten", then gone'
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-k
+  verifies:
+  - FR-12b.4
+  contract: '`ERROR` `Paper Feed (02)` / `ERROR` after `0x0A` → "Foto ist da" and "Foto fehlt" / only "Behoben – nochmal drucken"'
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-l
+  verifies:
+  - FR-12b.4
+  contract: '`LAYER_2` · open page → no decisions offered'
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-m
+  verifies:
+  - FR-12b.25
+  contract: '`ERROR` · tap "Foto ist da", no confirmation; then confirm → nothing sent on the tap; sent after confirming, naming the copy'
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-n
+  verifies:
+  - FR-12b.17
+  contract: '`LAYER_2` · POST "Foto ist da" → ignored, logged'
+  tier: unit
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-o
+  verifies:
+  - FR-12b.18
+  contract: '`ERROR`, two phones · phone A "Foto ist da", phone B "Foto fehlt" 1 s later → `DONE`, job not resent'
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-p
+  verifies:
+  - FR-12b.34
+  contract: Same scenario → phone B's decision logged as ignored
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-q
+  verifies:
+  - FR-12b.35
+  contract: 'Same scenario, a third page open → phone B and the third page show "Bereits entschieden: Foto ist da" within T_ui'
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-r
+  verifies:
+  - FR-12b.6
+  contract: Page open · inject layer message → new stage within T_ui, no reload
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-s
+  verifies:
+  - FR-12b.7
+  contract: Page open · cut the connection → "Keine Verbindung zur Booth" within T_ui
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-t
+  verifies:
+  - FR-12b.30
+  contract: Page open, `ERROR` · cut the connection, restore it → decision buttons gone while cut; back only after fresh data arrived
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-u
+  verifies:
+  - FR-12b.12
+  contract: Any state → no cancel / enable buttons
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-v
+  verifies:
+  - FR-12b.20
+  contract: Booth browser, `ERROR`, Wi-Fi off · admin login on the laptop → menu → "Drucker" → "Foto ist da", confirm → decision applied; queue re-enabled; guest print screen continues afterwards
+  tier: e2e
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-w
+  verifies:
+  - FR-12b.21
+  contract: Fresh install · open printer status page → switch shown, on
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-x
+  verifies:
+  - FR-12b.36
+  contract: Switch auto-resume off on the phone · restart booth → still off; next error waits for the operator
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-y
+  verifies:
+  - FR-12b.37
+  contract: Switch off, copy waiting in `ERROR` with clean *printed* evidence · switch on → copy decided "Foto ist da" automatically
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-z
+  verifies:
+  - FR-12b.38
+  contract: Switch off on phone A, on on phone B → two log entries with time and browser
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-aa
+  verifies:
+  - FR-12b.39
+  contract: Two pages open · switch off on one → other page shows off within T_ui
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-ab
+  verifies:
+  - FR-12b.22
+  contract: '`ERROR` `Paper Feed (02)`, simulated query: error still active · operator "Foto fehlt" → power-cycle prompt'
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-ac
+  verifies:
+  - FR-12b.22
+  contract: '`ERROR`, simulated query: *Idle*, no error · operator "Foto fehlt" → normal confirmation (Appendix C), copy resent once after it'
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-ad
+  verifies:
+  - FR-12b.23
+  contract: Power-cycle prompt shown · operator confirms "aus- und eingeschaltet" → "Foto fehlt" applied, copy resent once
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-ae
+  verifies:
+  - FR-12b.23
+  contract: Power-cycle prompt shown · operator closes it → copy stays in `ERROR`, nothing resent
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-af
+  verifies:
+  - FR-12b.24
+  contract: Prompt confirmed → log entry for the decision carries the power-cycle confirmation, time and browser
+  tier: unit
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-ag
+  verifies:
+  - FR-12b.1
+  contract: Mobile browser (360×800 viewport) on the booth network, nothing installed · open `login/`, log in, menu → "Drucker" → printer status page shown
+  tier: e2e
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-ah
+  verifies:
+  - FR-12b.1
+  contract: Real booth, operator phone on the booth Wi-Fi · type the address from the label inside the booth → upstream login page loads
+  tier: bench
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-ai
+  verifies:
+  - FR-12b.9
+  contract: Every printer status page state (idle, printing, `ERROR` with decisions, confirmation, power-cycle prompt, "Blatt verbraucht?", counter entry) → all text German (Appendix C; raw CUPS message excepted)
+  tier: e2e
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-aj
+  verifies:
+  - FR-12b.31
+  contract: 360×800 viewport · same states → page width ≤ 360 px
+  tier: e2e
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-ak
+  verifies:
+  - FR-12b.32
+  contract: 360×800 viewport · same states → every button, link and switch ≥ 48×48 CSS px
+  tier: e2e
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-al
+  verifies:
+  - FR-12b.10
+  contract: 'Booth started · request 1 printed; request 2 with 2 copies, copy 1 `Paper Feed (02)` → "Foto fehlt" → resent → both `DONE` → list: request 1 1 requested / 1 printed; request 2 2 requested / 2 printed / 1 failed, decision "Foto fehlt" with time'
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-am
+  verifies:
+  - FR-12b.10
+  contract: After that scenario · restart the booth service → list empty; both requests still in the logs
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-an
+  verifies:
+  - FR-12b.11
+  contract: Printer status page, idle · set paper 18 and prints 50, then correct paper to 17; then `ERROR` → "Foto fehlt" confirmed → page shows 17 / 50; "Blatt verbraucht?" shown on the same page
+  tier: e2e
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-ao
+  verifies:
+  - FR-12b.15
+  contract: Printer status page open · tap the menu link → `login/menu.php` opens, session still valid
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-12b-ap
+  verifies:
+  - FR-12b.19
+  contract: '`SetEnv FAST_RETURN 0` removed · start booth, open printer status page; then restore it, restart → warning text from Appendix C shown; after the restore no warning'
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-13-a
+  verifies:
+  - NFR-13.2
+  contract: Booth after a photobooth-setup run · read `/etc/cups/cups-files.conf`; during a simulated print read the backend process's environment → `SetEnv FAST_RETURN 0` present (not only in `cupsd.conf`); backend runs with `FAST_RETURN=0`
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-13-b
+  verifies:
+  - NFR-13.2
+  contract: Real SELPHY · one print → backend attached until `Print complete`; CUPS *completed* 1–3 s after the eject (Appendix A `T_cups_completed`)
+  tier: bench
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-13-c
+  verifies:
+  - NFR-13.3
+  contract: Print running · switch the router off → print completes, print screen shows every stage
+  tier: bench
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-13-d
+  verifies:
+  - NFR-13.4
+  contract: '`SetEnv` line removed · start booth → warning logged and shown on the phone'
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-13-e
+  verifies:
+  - NFR-13.1
+  contract: CI, photobooth-setup via the read-only token (R13) · set up the queue with `cups/entrypoint.sh` in its container and with `native/setup-printer.sh` on the runner; dump `lpoptions -p selphy -l` and the queue's `lpstat -l -p selphy` options from each → identical option sets and values
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-14-a
+  verifies:
+  - FR-14.1
+  contract: 2 copies · copy 1 `Paper Feed (02)`, printer query results, "Foto fehlt" from phone A, a second decision from phone B 1 s later, copy 2 printed → one entry per stage change, backend message, error, query result and decision, each with timestamp, job ID, copy k/N and source; phone B's decision logged as ignored
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-14-b
+  verifies:
+  - FR-14.2
+  contract: That scenario plus one clean single print, then restart the booth · count from the log files alone → 3 copies requested, 3 printed, 1 failed
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-15-a
+  verifies:
+  - NFR-15.1
+  contract: Real booth router · scan the booth Wi-Fi from a phone and read the router's security setting → WPA2 or WPA3
+  tier: bench
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-15-b
+  verifies:
+  - NFR-15.5
+  contract: Real booth · walk every guest page (start, result, gallery, QR) and decode every QR code shown; check the booth labels → booth Wi-Fi password found nowhere; no `WIFI:` QR for the booth network
+  tier: bench
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-15-c
+  verifies:
+  - NFR-15.6
+  contract: Booth configured for an event · read the config → `login.enabled` and `protect.admin` both on
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-15-d
+  verifies:
+  - NFR-15.2
+  contract: Second host on the booth network (not localhost), no session · open the printer status page and POST a decision → login page; decision refused
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-15-e
+  verifies:
+  - NFR-15.3
+  contract: Real booth at the event site · from a device off the booth network (mobile data), request the printer status page and decision endpoint via the public photo/QR host and the router's WAN address → no response or 404; no printer data
+  tier: bench
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-15-f
+  verifies:
+  - NFR-15.4
+  contract: Booth after a photobooth-setup run · `sudo -l -U <web server user>`; list `/etc/sudoers.d/` → only the fixed printer-query command line(s), `NOPASSWD`, all from the one drop-in file
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-5-r
+  verifies: &id001
+  - FR-5.15
+  - FR-6.4
+  contract: FR-5.15/FR-6.4 held photo printed by the printer after the fix
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-5-s
+  verifies: *id001
+  contract: FR-5.15/FR-6.4 held photo printed by the printer after the fix
+  tier: bench
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-5-t
+  verifies: &id002
+  - FR-5.15
+  - FR-6.4
+  contract: FR-5.15/FR-6.4 held photo lost by a power cycle
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-5-u
+  verifies: *id002
+  contract: FR-5.15/FR-6.4 held photo lost by a power cycle
+  tier: bench
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-5-v
+  verifies:
+  - FR-5.12
+  - FR-5.15
+  contract: FR-5.12/FR-5.15 three copies with an error on copy 2
+  tier: integration
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-17.5-a
+  verifies:
+  - L-Q1
+  contract: 'S1: Limit 18 · 18 prints · unlock button · print again (both upstream refs)'
+  tier: e2e
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-17.5-b
+  verifies:
+  - L-Q1
+  contract: 'S2: Limit 18 · 18 prints · admin reset without, then with "print database" · print again'
+  tier: e2e
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-17.5-c
+  verifies:
+  - L-Q2
+  contract: 'S3: Limit 0 · 20 prints; then place a stale `print.lock` · print'
+  tier: e2e
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-17.5-d
+  verifies:
+  - L-Q3
+  contract: 'S4: `print.auto` on, `auto_delay` 2 s · take a photo, reload the result page during and after the delay; repeat with the queue stopped and with a print running'
+  tier: e2e
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null
+- id: T-17.5-e
+  verifies:
+  - L-Q4
+  contract: 'S5: Limit 0 · 10 gallery reprints in quick succession; one request with 3 copies'
+  tier: e2e
+  file: null
+  scenario: null
+  status: planned
+  last_run:
+    date: null
+    commit: null
+    where: null
+    evidence: null

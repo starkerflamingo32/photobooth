@@ -1,0 +1,6 @@
+node_modules
+test-results
+testing/e2e/node_modules
+vendor/*
+!vendor/.htaccess
+!vendor/Seriously

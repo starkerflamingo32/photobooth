@@ -1,0 +1,12 @@
+{
+  "name": "booth-tests",
+  "private": true,
+  "description": "Integration and e2e suites of the virtual test setup (FSD §17.1)",
+  "scripts": {
+    "test": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.49.1",
+    "yaml": "2.6.1"
+  }
+}

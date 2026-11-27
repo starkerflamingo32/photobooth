@@ -1,0 +1,67 @@
+# Weekly: merge upstream dev into a scratch copy of booth and run the suites;
+# open an issue if anything breaks (FSD §17.2).
+name: upstream-drift
+
+on:
+  schedule:
+    - cron: '17 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  drift:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          path: photobooth
+          fetch-depth: 0
+          submodules: true
+      - name: Merge upstream dev (scratch, not pushed)
+        working-directory: photobooth
+        run: |
+          git config user.name drift-check
+          git config user.email drift-check@invalid
+          git fetch https://github.com/PhotoboothProject/photobooth dev
+          git merge --no-edit FETCH_HEAD
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          tools: composer:v2
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+      - name: Unit tier
+        working-directory: photobooth
+        run: npm install && npm run build && composer lint && composer phpstan && composer phpunit
+      - id: setup
+        run: echo "ref=$(cat photobooth/testing/setup-ref)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v7
+        with:
+          repository: starkerflamingo32/photobooth-setup
+          ref: ${{ steps.setup.outputs.ref }}
+          token: ${{ secrets.SETUP_REPO_TOKEN }}
+          path: photobooth-setup
+          persist-credentials: false
+      - name: Integration and e2e suites
+        working-directory: photobooth
+        env:
+          SETUP_DIR: ${{ github.workspace }}/photobooth-setup
+        run: testing/run.sh test integration && testing/run.sh test e2e
+      - name: Open an issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create -R "${{ github.repository }}" \
+            --title "Upstream drift: merging upstream dev breaks the booth suites" \
+            --body "Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: drift-evidence
+          path: photobooth/test-results/

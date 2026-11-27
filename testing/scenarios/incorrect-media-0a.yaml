@@ -1,0 +1,3 @@
+id: incorrect-media-0a
+description: Wrong cassette for the job (R9, inferred from the Gutenprint source) - backend cancels the job, queue keeps running, nothing printed.
+printer: {wrong_media: true}

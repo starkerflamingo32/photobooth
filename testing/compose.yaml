@@ -1,0 +1,110 @@
+# Virtual test setup (FSD §17.1, Method → test infrastructure).
+#
+# The deployed services from photobooth-setup (cups, dummy-dslr, web-ftp, and
+# Photobooth's glue: fake gphoto2, apply-config), with Photobooth built from
+# this working tree and the SELPHY replaced by the simulator. Used unchanged
+# locally and in GitHub Actions; only SETUP_DIR differs.
+#
+#   SETUP_DIR   photobooth-setup checkout (default: sibling clone)
+#   SIM_TIME_SCALE   real seconds per simulated second (default 0.1)
+#
+# Run through testing/run.sh, which also collects the evidence.
+
+name: booth-test
+
+services:
+  # The deployed CUPS image, unchanged. Built only as the base of cups-sim.
+  cups-base:
+    build: ${SETUP_DIR:-../../photobooth-setup}/cups
+    image: booth-test/cups-base
+    profiles: [base]
+
+  cups:
+    build:
+      context: ./stack/cups-sim
+      additional_contexts:
+        # Built first by run.sh (service cups-base, profile "base").
+        cups-base: docker-image://booth-test/cups-base
+    # cupsd exits with "cupsdDoSelect() failed - Bad address" when the
+    # container's open-file limit is very high (Docker default on some hosts).
+    ulimits:
+      nofile: 4096
+    environment:
+      SIM_TIME_SCALE: ${SIM_TIME_SCALE:-0.1}
+    healthcheck:
+      test: ["CMD", "test", "-f", "/run/sim-ready"]
+      interval: 2s
+      retries: 60
+
+  dummy-dslr:
+    build: ${SETUP_DIR:-../../photobooth-setup}/dummy-dslr
+    ports:
+      - "${TEST_CAMERA_PORT:-18082}:8080"
+
+  web-ftp:
+    build: ${SETUP_DIR:-../../photobooth-setup}/web-ftp
+    ports:
+      - "${TEST_GALLERY_PORT:-18081}:80"
+    environment:
+      FTP_PASV_ADDRESS: 127.0.0.1
+      PHOTO_USER: guest
+      PHOTO_PASSWORD: test-only-gallery
+      FTP_USER: photobooth
+      FTP_PASSWORD: test-only-ftp
+
+  photobooth:
+    build:
+      # BOOTH_SRC: source tree to build (default this working tree; run.sh
+      # sets it to a clone of BOOTH_REF for upstream characterisation).
+      context: ${BOOTH_SRC:-..}
+      dockerfile: ${TESTING_DIR:-.}/stack/photobooth/Dockerfile
+      additional_contexts:
+        setup: ${SETUP_DIR:-../../photobooth-setup}/photobooth
+        sim: ./stack/cups-sim
+    depends_on:
+      cups:
+        condition: service_healthy
+      dummy-dslr:
+        condition: service_started
+      web-ftp:
+        condition: service_started
+    ports:
+      - "${TEST_PHOTOBOOTH_PORT:-18080}:80"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      # The browser reaches the live view and the gallery through the host's
+      # published ports, as guests' phones do through PUBLIC_HOST.
+      PUBLIC_HOST: host.docker.internal
+      GALLERY_PORT: ${TEST_GALLERY_PORT:-18081}
+      CAMERA_PORT: ${TEST_CAMERA_PORT:-18082}
+      FTP_USER: photobooth
+      FTP_PASSWORD: test-only-ftp
+      SIM_QUERY_URL: http://cups:8631
+      SIM_TIME_SCALE: ${SIM_TIME_SCALE:-0.1}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "-o", "/dev/null", "http://localhost/"]
+      interval: 3s
+      retries: 60
+
+  # Playwright runner: integration and e2e suites (testing/e2e).
+  runner:
+    build: ./e2e
+    profiles: [test]
+    depends_on:
+      photobooth:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      BOOTH_URL: http://host.docker.internal:${TEST_PHOTOBOOTH_PORT:-18080}
+      SIM_URL: http://cups:8631
+      SIM_TIME_SCALE: ${SIM_TIME_SCALE:-0.1}
+      CI: ${CI:-}
+    ipc: host
+    volumes:
+      - ./e2e/tests:/work/tests:ro
+      - ./e2e/lib:/work/lib:ro
+      - ./e2e/playwright.config.ts:/work/playwright.config.ts:ro
+      - ./scenarios:/work/scenarios:ro
+      - ../test-results:/work/test-results

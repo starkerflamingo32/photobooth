@@ -1,0 +1,3 @@
+id: empty-tray
+description: Empty paper tray inserted (P-1 job 120/121, B-1 job 126) - Paper Feed (02) after feeding retries; printer holds the photo and prints it by itself after a refill.
+printer: {tray: empty}

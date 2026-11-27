@@ -1,0 +1,57 @@
+# FSD §17.5: upstream print limit, auto-print and rate limit, run in the
+# virtual test setup against several refs. Answers L-Q1…L-Q4 in the summary.
+name: upstream-characterisation
+
+on:
+  workflow_dispatch:
+    inputs:
+      refs:
+        description: Refs to run against (JSON list)
+        default: '["49b09a94", "76d76e36^", "booth"]'
+
+jobs:
+  characterise:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        ref: ${{ fromJSON(inputs.refs) }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          path: photobooth
+          fetch-depth: 0
+          submodules: true
+      - id: setup
+        run: echo "ref=$(cat photobooth/testing/setup-ref)" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v7
+        with:
+          repository: starkerflamingo32/photobooth-setup
+          ref: ${{ steps.setup.outputs.ref }}
+          token: ${{ secrets.SETUP_REPO_TOKEN }}
+          path: photobooth-setup
+          persist-credentials: false
+      - name: Characterisation suite
+        working-directory: photobooth
+        env:
+          SETUP_DIR: ${{ github.workspace }}/photobooth-setup
+          BOOTH_REF: ${{ matrix.ref }}
+        run: testing/run.sh test characterisation
+      - name: Answers
+        if: always()
+        working-directory: photobooth
+        run: |
+          echo "## ${{ matrix.ref }}" >> "$GITHUB_STEP_SUMMARY"
+          pip install pyyaml==6.0.2 >/dev/null
+          python3 testing/tools/summary.py test-results >> "$GITHUB_STEP_SUMMARY" || true
+      - id: name
+        if: always()
+        run: echo "safe=$(echo '${{ matrix.ref }}' | tr -c 'A-Za-z0-9._-' '_')" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: characterisation-${{ steps.name.outputs.safe }}
+          path: |
+            photobooth/test-results/
+            !photobooth/test-results/src-*

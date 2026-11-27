@@ -1,0 +1,4 @@
+id: ink-sheet-0c
+description: Ink sheet torn during printing (P-1 job 123) - Unknown Error (0c) during MAGENTA; needs a power cycle, the held photo is lost.
+jobs:
+  - fault: {code: "0c", layer: MAGENTA, after: 2}

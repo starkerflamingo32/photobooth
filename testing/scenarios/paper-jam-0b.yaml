@@ -1,0 +1,4 @@
+id: paper-jam-0b
+description: Real paper jam (owner report, not logged on the bench) - Paper jam (0b) during CYAN; power cycle, photo lost (A4).
+jobs:
+  - fault: {code: "0b", layer: CYAN, after: 3}
