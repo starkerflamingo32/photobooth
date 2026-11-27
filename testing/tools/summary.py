@@ -31,7 +31,9 @@ def main():
                 if res.get("status") == "passed":
                     passed.append(title)
                 else:
-                    err = (res.get("error") or {}).get("message", res.get("status", "?"))
+                    err = (res.get("error") or {}).get(
+                        "message", res.get("status", "?")
+                    )
                     failed.append((title, err.strip().splitlines()[0] if err else ""))
         for s in suite.get("suites", []):
             walk(s)

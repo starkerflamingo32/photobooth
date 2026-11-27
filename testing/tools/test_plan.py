@@ -17,6 +17,7 @@ headed "| ID | Precondition · stimulus | …"), the §5.4 exactly-once contract
 
 import datetime
 import json
+import os
 import re
 import subprocess
 import sys
@@ -69,7 +70,10 @@ def fsd_contracts():
     # §17.5 characterisation scenarios.
     sec = text.split("### 17.5", 1)[1].split("\n### 17.6", 1)[0]
     for m in re.finditer(r"^\| (S\d) \| (.*?) \| (.*?) \|$", sec, re.M):
-        yield [q.strip() for q in m.group(3).split(",")], "%s: %s" % (m.group(1), m.group(2)), "e2e"
+        yield [q.strip() for q in m.group(3).split(",")], "%s: %s" % (
+            m.group(1),
+            m.group(2),
+        ), "e2e"
 
 
 def load_plan():
@@ -84,7 +88,10 @@ def save_plan(plan):
         "# IDs are stable and never reused. status/last_run are set from real runs only\n"
         "# (testing/tools/test_plan.py record); coverage is generated (test_plan.py coverage).\n"
     )
-    PLAN.write_text(header + yaml.safe_dump(plan, sort_keys=False, allow_unicode=True, width=1000), encoding="utf-8")
+    PLAN.write_text(
+        header + yaml.safe_dump(plan, sort_keys=False, allow_unicode=True, width=1000),
+        encoding="utf-8",
+    )
 
 
 def letters(n):
@@ -100,17 +107,32 @@ def letters(n):
 # planned and tracked like them. Their positive controls gate every other run.
 INFRA = [
     ("T-17.1-a", "normal print with FAST_RETURN=0 reports the B-1 stage sequence"),
-    ("T-17.1-b", "without FAST_RETURN=0 the backend leaves at Printing YELLOW (P-1 job 118)"),
-    ("T-17.1-c", "paper/tray/ink errors stop the queue, job pending, held photo printed after the fix"),
-    ("T-17.1-d", "cupsenable after the self-print resends the job: duplicate in the job log (R3)"),
+    (
+        "T-17.1-b",
+        "without FAST_RETURN=0 the backend leaves at Printing YELLOW (P-1 job 118)",
+    ),
+    (
+        "T-17.1-c",
+        "paper/tray/ink errors stop the queue, job pending, held photo printed after the fix",
+    ),
+    (
+        "T-17.1-d",
+        "cupsenable after the self-print resends the job: duplicate in the job log (R3)",
+    ),
     ("T-17.1-e", "ink sheet error 0c: power cycle loses the photo (P-1 job 123)"),
     ("T-17.1-f", "incorrect media 0a: job cancelled, queue keeps running (R9)"),
     ("T-17.1-g", "a held job cancelled in CUPS is still printed (R18)"),
     ("T-17.1-h", "printer status query answers as the real -s (R14)"),
     ("T-17.1-i", "printer status query hangs with libusb error -7 (R14)"),
     ("T-17.1-j", "query while the queue is enabled is recorded as a violation"),
-    ("T-17.1-k", "booth browser: take a photo and print it; exactly one job reaches the simulated SELPHY"),
-    ("T-17.1-l", "browser roles: admin, operator phone and stale page open the booth in parallel"),
+    (
+        "T-17.1-k",
+        "booth browser: take a photo and print it; exactly one job reaches the simulated SELPHY",
+    ),
+    (
+        "T-17.1-l",
+        "browser roles: admin, operator phone and stale page open the booth in parallel",
+    ),
 ]
 
 
@@ -125,19 +147,33 @@ def sync():
                     "verifies": ["§17.1"],
                     "contract": contract,
                     "tier": "e2e" if tid in ("T-17.1-k", "T-17.1-l") else "integration",
-                    "file": "testing/e2e/tests/%s" % ("e2e/booth-smoke.spec.ts" if tid in ("T-17.1-k", "T-17.1-l") else "integration/simulator.spec.ts"),
+                    "file": "testing/e2e/tests/%s"
+                    % (
+                        "e2e/booth-smoke.spec.ts"
+                        if tid in ("T-17.1-k", "T-17.1-l")
+                        else "integration/simulator.spec.ts"
+                    ),
                     "scenario": None,
                     "status": "written",
-                    "last_run": {"date": None, "commit": None, "where": None, "evidence": None},
+                    "last_run": {
+                        "date": None,
+                        "commit": None,
+                        "where": None,
+                        "evidence": None,
+                    },
                 }
             )
-    known = {(tuple(t["verifies"]), t.get("contract"), t["tier"]) for t in plan["tests"]}
+    known = {
+        (tuple(t["verifies"]), t.get("contract"), t["tier"]) for t in plan["tests"]
+    }
     used = {t["id"] for t in plan["tests"]}
     added = 0
     for verifies, contract, tier in fsd_contracts():
         if (tuple(verifies), contract, tier) in known:
             continue
-        chap = chapter_of(verifies[0]) or ("17.5" if verifies[0].startswith("L-Q") else "x")
+        chap = chapter_of(verifies[0]) or (
+            "17.5" if verifies[0].startswith("L-Q") else "x"
+        )
         i = 0
         while "T-%s-%s" % (chap, letters(i)) in used:
             i += 1
@@ -152,7 +188,12 @@ def sync():
                 "file": None,
                 "scenario": None,
                 "status": "planned",
-                "last_run": {"date": None, "commit": None, "where": None, "evidence": None},
+                "last_run": {
+                    "date": None,
+                    "commit": None,
+                    "where": None,
+                    "evidence": None,
+                },
             }
         )
         known.add((tuple(verifies), contract, tier))
@@ -198,13 +239,18 @@ def coverage(strict=False):
         tiers.setdefault(t["tier"], {}).setdefault(t["status"], 0)
         tiers[t["tier"]][t["status"]] += 1
     print("# Coverage (generated from testing/test-plan.yaml and the FSD)\n")
-    print("Must/Should requirements: %d\n" % sum(1 for p in reqs.values() if p != "May"))
+    print(
+        "Must/Should requirements: %d\n" % sum(1 for p in reqs.values() if p != "May")
+    )
     for k, v in rows.items():
         print("- **%s** (%d): %s" % (k, len(v), ", ".join(v) if v else "—"))
     print("\n| Tier | " + " | ".join(sorted(STATUSES)) + " |")
     print("|---|" + "---|" * len(STATUSES))
     for tier, counts in sorted(tiers.items()):
-        print("| %s | %s |" % (tier, " | ".join(str(counts.get(s, 0)) for s in sorted(STATUSES))))
+        print(
+            "| %s | %s |"
+            % (tier, " | ".join(str(counts.get(s, 0)) for s in sorted(STATUSES)))
+        )
     if strict and (rows["no test"] or rows["failing"]):
         return 1
     return 0
@@ -230,8 +276,22 @@ def record(results_path, where):
 
     for s in report.get("suites", []):
         walk(s)
-    commit = subprocess.run(["git", "-C", str(ROOT), "rev-parse", "--short", "HEAD"], capture_output=True, text=True).stdout.strip()
-    dirty = subprocess.run(["git", "-C", str(ROOT), "status", "--porcelain"], capture_output=True, text=True).stdout.strip()
+    # RECORD_COMMIT names the tested commit where git is not available.
+    commit = os.environ.get("RECORD_COMMIT")
+    if not commit:
+        head = subprocess.run(
+            ["git", "-C", str(ROOT), "rev-parse", "--short", "HEAD"],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+        dirty = subprocess.run(
+            ["git", "-C", str(ROOT), "status", "--porcelain"],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.strip()
+        commit = head + ("+dirty" if dirty else "")
     plan = load_plan()
     today = datetime.date.today().isoformat()
     for t in plan["tests"]:
@@ -239,7 +299,7 @@ def record(results_path, where):
             t["status"] = "passing" if outcome[t["id"]] else "failing"
             t["last_run"] = {
                 "date": today,
-                "commit": commit + ("+dirty" if dirty else ""),
+                "commit": commit,
                 "where": where,
                 "evidence": "test-results/ (Playwright report, videos, traces, stack logs)",
             }

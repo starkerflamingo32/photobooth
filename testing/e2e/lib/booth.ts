@@ -72,3 +72,21 @@ export async function adminSet(page: Page, values: Record<string, string | numbe
     const body = await res.json().catch(() => ({}));
     expect(body.status ?? 'success', JSON.stringify(body)).toBe('success');
 }
+
+/** The admin panel's reset button with the given checkboxes (others off). */
+export async function adminReset(page: Page, opts: { remove_print_db: boolean }) {
+    await page.goto('/admin/');
+    await expect(page.locator('#reset-btn')).toBeAttached();
+    await page.evaluate((opts) => {
+        for (const name of ['remove_media', 'remove_mail_db', 'remove_print_db', 'remove_config']) {
+            const box = document.querySelector<HTMLInputElement>(`input[type="checkbox"][name="reset[${name}]"]`);
+            if (box) box.checked = name === 'remove_print_db' ? opts.remove_print_db : false;
+        }
+    }, opts);
+    page.once('dialog', (d) => d.accept());
+    const done = page.waitForResponse((r) => r.url().includes('/api/admin.php') && r.request().method() === 'POST');
+    await page.locator('#reset-btn').click();
+    const res = await done;
+    expect(res.ok()).toBe(true);
+    await page.waitForLoadState();
+}

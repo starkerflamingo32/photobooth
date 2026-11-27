@@ -99,9 +99,12 @@ services:
     environment:
       BOOTH_URL: http://host.docker.internal:${TEST_PHOTOBOOTH_PORT:-18080}
       SIM_URL: http://cups:8631
+      HOME: /tmp
       SIM_TIME_SCALE: ${SIM_TIME_SCALE:-0.1}
       CI: ${CI:-}
     ipc: host
+    # Evidence files belong to the user running the tests (run.sh sets these).
+    user: "${RUN_UID:-1000}:${RUN_GID:-1000}"
     volumes:
       - ./e2e/tests:/work/tests:ro
       - ./e2e/lib:/work/lib:ro

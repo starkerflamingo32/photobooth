@@ -9,12 +9,12 @@ tests:
   tier: integration
   file: testing/e2e/tests/integration/simulator.spec.ts
   scenario: null
-  status: written
+  status: passing
   last_run:
-    date: null
-    commit: null
-    where: null
-    evidence: null
+    date: '2026-11-27'
+    commit: f3ec6ed6+dirty
+    where: local VM Docker
+    evidence: test-results/ (Playwright report, videos, traces, stack logs)
 - id: T-17.1-b
   verifies:
   - §17.1
@@ -22,12 +22,12 @@ tests:
   tier: integration
   file: testing/e2e/tests/integration/simulator.spec.ts
   scenario: null
-  status: written
+  status: passing
   last_run:
-    date: null
-    commit: null
-    where: null
-    evidence: null
+    date: '2026-11-27'
+    commit: f3ec6ed6+dirty
+    where: local VM Docker
+    evidence: test-results/ (Playwright report, videos, traces, stack logs)
 - id: T-17.1-c
   verifies:
   - §17.1
@@ -35,12 +35,12 @@ tests:
   tier: integration
   file: testing/e2e/tests/integration/simulator.spec.ts
   scenario: null
-  status: written
+  status: passing
   last_run:
-    date: null
-    commit: null
-    where: null
-    evidence: null
+    date: '2026-11-27'
+    commit: f3ec6ed6+dirty
+    where: local VM Docker
+    evidence: test-results/ (Playwright report, videos, traces, stack logs)
 - id: T-17.1-d
   verifies:
   - §17.1
@@ -48,12 +48,12 @@ tests:
   tier: integration
   file: testing/e2e/tests/integration/simulator.spec.ts
   scenario: null
-  status: written
+  status: passing
   last_run:
-    date: null
-    commit: null
-    where: null
-    evidence: null
+    date: '2026-11-27'
+    commit: f3ec6ed6+dirty
+    where: local VM Docker
+    evidence: test-results/ (Playwright report, videos, traces, stack logs)
 - id: T-17.1-e
   verifies:
   - §17.1
@@ -61,12 +61,12 @@ tests:
   tier: integration
   file: testing/e2e/tests/integration/simulator.spec.ts
   scenario: null
-  status: written
+  status: passing
   last_run:
-    date: null
-    commit: null
-    where: null
-    evidence: null
+    date: '2026-11-27'
+    commit: f3ec6ed6+dirty
+    where: local VM Docker
+    evidence: test-results/ (Playwright report, videos, traces, stack logs)
 - id: T-17.1-f
   verifies:
   - §17.1
@@ -74,12 +74,12 @@ tests:
   tier: integration
   file: testing/e2e/tests/integration/simulator.spec.ts
   scenario: null
-  status: written
+  status: passing
   last_run:
-    date: null
-    commit: null
-    where: null
-    evidence: null
+    date: '2026-11-27'
+    commit: f3ec6ed6+dirty
+    where: local VM Docker
+    evidence: test-results/ (Playwright report, videos, traces, stack logs)
 - id: T-17.1-g
   verifies:
   - §17.1
@@ -87,12 +87,12 @@ tests:
   tier: integration
   file: testing/e2e/tests/integration/simulator.spec.ts
   scenario: null
-  status: written
+  status: passing
   last_run:
-    date: null
-    commit: null
-    where: null
-    evidence: null
+    date: '2026-11-27'
+    commit: f3ec6ed6+dirty
+    where: local VM Docker
+    evidence: test-results/ (Playwright report, videos, traces, stack logs)
 - id: T-17.1-h
   verifies:
   - §17.1
@@ -100,12 +100,12 @@ tests:
   tier: integration
   file: testing/e2e/tests/integration/simulator.spec.ts
   scenario: null
-  status: written
+  status: passing
   last_run:
-    date: null
-    commit: null
-    where: null
-    evidence: null
+    date: '2026-11-27'
+    commit: f3ec6ed6+dirty
+    where: local VM Docker
+    evidence: test-results/ (Playwright report, videos, traces, stack logs)
 - id: T-17.1-i
   verifies:
   - §17.1
@@ -113,12 +113,12 @@ tests:
   tier: integration
   file: testing/e2e/tests/integration/simulator.spec.ts
   scenario: null
-  status: written
+  status: passing
   last_run:
-    date: null
-    commit: null
-    where: null
-    evidence: null
+    date: '2026-11-27'
+    commit: f3ec6ed6+dirty
+    where: local VM Docker
+    evidence: test-results/ (Playwright report, videos, traces, stack logs)
 - id: T-17.1-j
   verifies:
   - §17.1
@@ -126,12 +126,12 @@ tests:
   tier: integration
   file: testing/e2e/tests/integration/simulator.spec.ts
   scenario: null
-  status: written
+  status: passing
   last_run:
-    date: null
-    commit: null
-    where: null
-    evidence: null
+    date: '2026-11-27'
+    commit: f3ec6ed6+dirty
+    where: local VM Docker
+    evidence: test-results/ (Playwright report, videos, traces, stack logs)
 - id: T-17.1-k
   verifies:
   - §17.1
@@ -139,12 +139,12 @@ tests:
   tier: e2e
   file: testing/e2e/tests/e2e/booth-smoke.spec.ts
   scenario: null
-  status: written
+  status: passing
   last_run:
-    date: null
-    commit: null
-    where: null
-    evidence: null
+    date: '2026-11-27'
+    commit: f3ec6ed6+dirty
+    where: local VM Docker
+    evidence: test-results/ (Playwright report, videos, traces, stack logs)
 - id: T-17.1-l
   verifies:
   - §17.1
@@ -152,12 +152,12 @@ tests:
   tier: e2e
   file: testing/e2e/tests/e2e/booth-smoke.spec.ts
   scenario: null
-  status: written
+  status: passing
   last_run:
-    date: null
-    commit: null
-    where: null
-    evidence: null
+    date: '2026-11-27'
+    commit: f3ec6ed6+dirty
+    where: local VM Docker
+    evidence: test-results/ (Playwright report, videos, traces, stack logs)
 - id: T-5-a
   verifies:
   - FR-5.1
@@ -2166,9 +2166,9 @@ tests:
   - L-Q1
   contract: 'S1: Limit 18 · 18 prints · unlock button · print again (both upstream refs)'
   tier: e2e
-  file: null
+  file: testing/e2e/tests/characterisation/upstream-print.spec.ts
   scenario: null
-  status: planned
+  status: written
   last_run:
     date: null
     commit: null
@@ -2179,9 +2179,9 @@ tests:
   - L-Q1
   contract: 'S2: Limit 18 · 18 prints · admin reset without, then with "print database" · print again'
   tier: e2e
-  file: null
+  file: testing/e2e/tests/characterisation/upstream-print.spec.ts
   scenario: null
-  status: planned
+  status: written
   last_run:
     date: null
     commit: null
@@ -2192,9 +2192,9 @@ tests:
   - L-Q2
   contract: 'S3: Limit 0 · 20 prints; then place a stale `print.lock` · print'
   tier: e2e
-  file: null
+  file: testing/e2e/tests/characterisation/upstream-print.spec.ts
   scenario: null
-  status: planned
+  status: written
   last_run:
     date: null
     commit: null
@@ -2205,9 +2205,9 @@ tests:
   - L-Q3
   contract: 'S4: `print.auto` on, `auto_delay` 2 s · take a photo, reload the result page during and after the delay; repeat with the queue stopped and with a print running'
   tier: e2e
-  file: null
+  file: testing/e2e/tests/characterisation/upstream-print.spec.ts
   scenario: null
-  status: planned
+  status: written
   last_run:
     date: null
     commit: null
@@ -2218,9 +2218,9 @@ tests:
   - L-Q4
   contract: 'S5: Limit 0 · 10 gallery reprints in quick succession; one request with 3 copies'
   tier: e2e
-  file: null
+  file: testing/e2e/tests/characterisation/upstream-print.spec.ts
   scenario: null
-  status: planned
+  status: written
   last_run:
     date: null
     commit: null

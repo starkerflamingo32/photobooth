@@ -40,7 +40,12 @@ npm run eslint                    # JS lint
 ```
 
 The integration and e2e suites run against the virtual test setup
-([test infrastructure](test-infrastructure.md#virtual-test-setup)).
+([test infrastructure](test-infrastructure.md#running)):
+
+```sh
+testing/run.sh test integration   # needs Docker and ../photobooth-setup (or SETUP_DIR)
+testing/run.sh test e2e
+```
 
 ## Conventions
 

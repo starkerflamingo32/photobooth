@@ -39,7 +39,10 @@ function role(name: keyof Roles) {
         const page = await context.newPage();
         await use(page);
         await testInfo.attach(`${name}-final.png`, { body: await page.screenshot({ fullPage: true }), contentType: 'image/png' }).catch(() => {});
-        await context.close();
+        // With use.trace on, Playwright may already have collected this
+        // context's trace chunk when the test failed; closing then reports a
+        // missing temp file, which is not a test result.
+        await context.close().catch((e) => console.warn(`closing ${name} context: ${e.message}`));
     };
 }
 

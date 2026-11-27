@@ -29,6 +29,9 @@ if [ -n "${BOOTH_REF:-}" ]; then
 else
     export BOOTH_SRC=$root
 fi
+RUN_UID=$(id -u)
+RUN_GID=$(id -g)
+export RUN_UID RUN_GID
 compose() { docker compose -f "$here/compose.yaml" "$@"; }
 
 up() {

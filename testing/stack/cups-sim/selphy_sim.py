@@ -92,7 +92,16 @@ DEFAULT_TIMING = {
     # Error delays after the printer starts feeding (P-1/B-1): empty tray
     # Paper Feed (02) ~13-14 s, missing tray No Paper (03) ~4 s, missing ink
     # No Ink (07) ~4 s. Incorrect media (0a) (assumed) 2 s.
-    "error_after": {"02": 13.0, "03": 4.0, "07": 3.0, "09": 3.0, "05": 3.0, "08": 3.0, "0a": 2.0, "06": 3.0},
+    "error_after": {
+        "02": 13.0,
+        "03": 4.0,
+        "07": 3.0,
+        "09": 3.0,
+        "05": 3.0,
+        "08": 3.0,
+        "0a": 2.0,
+        "06": 3.0,
+    },
     # After a fix the printer starts the held print by itself: first pass
     # 16 s (paper) / 8 s (ink) after the fix in B-1; the pass comes ~2 s
     # after feeding starts, so feeding restarts after this delay.
@@ -153,7 +162,9 @@ class Printer:
         with self.lock:
             self.scenario = scenario or {}
             clock = self.scenario.get("clock", {})
-            self.scale = float(clock.get("scale", os.environ.get("SIM_TIME_SCALE", "1")))
+            self.scale = float(
+                clock.get("scale", os.environ.get("SIM_TIME_SCALE", "1"))
+            )
             timing = json.loads(json.dumps(DEFAULT_TIMING))
             for key, value in (self.scenario.get("timing") or {}).items():
                 if isinstance(value, dict):
@@ -174,7 +185,9 @@ class Printer:
             self.query_forced = list(q.get("answers") or [])
             self.query_hang_on_layer_change = bool(q.get("hang_on_layer_change", False))
             self.query_hang_s = float(q.get("hang_s", 17.0))
-            self.query_wrong_layer_after_hang = bool(q.get("wrong_layer_after_hang", False))
+            self.query_wrong_layer_after_hang = bool(
+                q.get("wrong_layer_after_hang", False)
+            )
             self.query_exit_on_hang = int(q.get("exit_on_hang", CUPS_BACKEND_FAILED))
             self.state = "idle"  # idle | feeding | printing | error
             self.layer = None
@@ -195,7 +208,9 @@ class Printer:
             self.loaded_at = now()
             self.cond.notify_all()
         for ev in self.scenario.get("events") or []:
-            threading.Thread(target=self._timed_event, args=(ev, self.loaded_at), daemon=True).start()
+            threading.Thread(
+                target=self._timed_event, args=(ev, self.loaded_at), daemon=True
+            ).start()
 
     def _timed_event(self, ev, loaded_at):
         time.sleep(float(ev["at"]) * self.scale)
@@ -227,8 +242,15 @@ class Printer:
         """The backend sent the spool data: the printer now holds the job."""
         with self.lock:
             spec_index = len(self.received)
-            spec = self.job_specs[spec_index] if spec_index < len(self.job_specs) else {}
-            job = dict(job, spec=spec or {}, received_index=spec_index + 1, received_at=iso(now()))
+            spec = (
+                self.job_specs[spec_index] if spec_index < len(self.job_specs) else {}
+            )
+            job = dict(
+                job,
+                spec=spec or {},
+                received_index=spec_index + 1,
+                received_at=iso(now()),
+            )
             self.received.append(dict(job))
             self.held = job
             self.log_event("received", cups_job=job["cups_job"], index=spec_index + 1)
@@ -339,7 +361,12 @@ class Printer:
                 return
             if self.ink_prints:
                 self.ink_prints -= 1
-            out = {"t": now(), "time": iso(now()), "cups_job": job["cups_job"], "run": job.get("run")}
+            out = {
+                "t": now(),
+                "time": iso(now()),
+                "cups_job": job["cups_job"],
+                "run": job.get("run"),
+            }
             self.outputs.append(out)
             self.log_event("photo_out", cups_job=job["cups_job"])
         if not wait_until(t["complete"]):
@@ -354,9 +381,23 @@ class Printer:
 
     def action(self, name, source="test", **args):
         with self.lock:
-            self.actions.append({"t": now(), "time": iso(now()), "action": name, "source": source, "args": args})
+            self.actions.append(
+                {
+                    "t": now(),
+                    "time": iso(now()),
+                    "action": name,
+                    "source": source,
+                    "args": args,
+                }
+            )
             self.log_event("action", action=name, source=source)
-            if name in ("fix", "refill_paper", "insert_tray", "insert_ink", "replace_ink"):
+            if name in (
+                "fix",
+                "refill_paper",
+                "insert_tray",
+                "insert_ink",
+                "replace_ink",
+            ):
                 if name in ("fix", "refill_paper", "insert_tray"):
                     self.tray = "ok"
                     if "sheets" in args:
@@ -411,7 +452,9 @@ class Printer:
             return  # needs a power cycle
         if not self.self_print:
             return  # this scenario's printer waits for its print button
-        delay = self.timing["resume_after"].get(self.error, self.timing["resume_after"]["default"])
+        delay = self.timing["resume_after"].get(
+            self.error, self.timing["resume_after"]["default"]
+        )
         self._resume_held(delay)
 
     def _resume_held(self, delay):
@@ -431,9 +474,19 @@ class Printer:
             queue_enabled = cups_queue_enabled()
             attached = [r for r in self.backend_runs if r.get("end") is None]
             if queue_enabled:
-                self.violations.append({"time": iso(now()), "what": "printer query while the queue is enabled (FR-9.11)"})
+                self.violations.append(
+                    {
+                        "time": iso(now()),
+                        "what": "printer query while the queue is enabled (FR-9.11)",
+                    }
+                )
             if attached:
-                self.violations.append({"time": iso(now()), "what": "printer query while a CUPS backend is attached (FR-9.11)"})
+                self.violations.append(
+                    {
+                        "time": iso(now()),
+                        "what": "printer query while a CUPS backend is attached (FR-9.11)",
+                    }
+                )
             forced = self.query_forced.pop(0) if self.query_forced else None
             hang = None
             if forced is not None:
@@ -471,9 +524,20 @@ class Printer:
                         nxt = LAYERS[min(LAYERS.index(self.layer) + 1, len(LAYERS) - 1)]
                         state_text = "Printing " + nxt
                         self.hang_pending_wrong_layer = False
-                    error_text = ERRORS[self.error] if self.state == "error" and self.error else None
+                    error_text = (
+                        ERRORS[self.error]
+                        if self.state == "error" and self.error
+                        else None
+                    )
                     media = "None" if self.ink in ("missing",) else "P"
-                lines = list(QUERY_PREAMBLE) + list(QUERY_PPD) + ["INFO: Printer state: " + state_text, "INFO: Media type: " + media]
+                lines = (
+                    list(QUERY_PREAMBLE)
+                    + list(QUERY_PPD)
+                    + [
+                        "INFO: Printer state: " + state_text,
+                        "INFO: Media type: " + media,
+                    ]
+                )
                 if error_text:
                     lines.append("INFO: Printer error: " + error_text)
                 lines.append("STATE: -connecting-to-device")
@@ -504,7 +568,8 @@ class Printer:
             return {
                 "state": self.state,
                 "state_line": self.state_line(),
-                "error": self.error and {"code": self.error, "text": ERRORS[self.error]},
+                "error": self.error
+                and {"code": self.error, "text": ERRORS[self.error]},
                 "held": self.held and {"cups_job": self.held["cups_job"]},
                 "physical": {
                     "tray": self.tray,
@@ -531,7 +596,9 @@ PRINTER = Printer()
 
 def cups_queue_enabled():
     try:
-        out = subprocess.run(["lpstat", "-p", QUEUE], capture_output=True, text=True, timeout=5).stdout
+        out = subprocess.run(
+            ["lpstat", "-p", QUEUE], capture_output=True, text=True, timeout=5
+        ).stdout
     except Exception:
         return None
     first = out.splitlines()[0] if out else ""
@@ -605,7 +672,9 @@ def backend_session(conn):
         while True:
             with p.lock:
                 if not p.connected:
-                    emit("ERROR: Failure to receive data from printer (libusb error -4: (0/12 from 0x82))")
+                    emit(
+                        "ERROR: Failure to receive data from printer (libusb error -4: (0/12 from 0x82))"
+                    )
                     finish(CUPS_BACKEND_FAILED)
                     return
                 if p.state == "error":
@@ -631,7 +700,9 @@ def backend_session(conn):
                 state, layer, err = p.state, p.layer, p.error
                 done = job.get("completed")
             if not connected:
-                emit("ERROR: Failure to receive data from printer (libusb error -4: (0/12 from 0x82))")
+                emit(
+                    "ERROR: Failure to receive data from printer (libusb error -4: (0/12 from 0x82))"
+                )
                 finish(CUPS_BACKEND_FAILED)
                 return
             if done:
@@ -652,7 +723,11 @@ def backend_session(conn):
                 emit("ERROR: Printer error: Unknown Error (00)")
                 finish(CUPS_BACKEND_STOP)
                 return
-            line = "Printer state: " + ("Feeding Paper" if state == "feeding" else "Printing " + layer if state == "printing" else "Idle")
+            line = "Printer state: " + (
+                "Feeding Paper"
+                if state == "feeding"
+                else "Printing " + layer if state == "printing" else "Idle"
+            )
             emit("INFO: " + line)
             if state == "printing" and run["fast_return"]:
                 # Fast return: the backend leaves as soon as printing starts
@@ -722,7 +797,9 @@ def cups_status():
         "printer": run_cmd(["lpstat", "-l", "-p", QUEUE])["stdout"],
         "accepting": run_cmd(["lpstat", "-a", QUEUE])["stdout"],
         "device": run_cmd(["lpstat", "-v", QUEUE])["stdout"],
-        "jobs_not_completed": run_cmd(["lpstat", "-W", "not-completed", "-o", QUEUE])["stdout"],
+        "jobs_not_completed": run_cmd(["lpstat", "-W", "not-completed", "-o", QUEUE])[
+            "stdout"
+        ],
         "jobs_all": run_cmd(["lpstat", "-W", "all", "-l", "-o", QUEUE])["stdout"],
         "enabled": cups_queue_enabled(),
     }
@@ -771,7 +848,9 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/cups/status":
                 return self._json(200, cups_status())
             if url.path == "/cups/error_log":
-                with open("/var/log/cups/error_log", encoding="utf-8", errors="replace") as fh:
+                with open(
+                    "/var/log/cups/error_log", encoding="utf-8", errors="replace"
+                ) as fh:
                     return self._text(200, fh.read())
             if url.path == "/cups/files-conf":
                 with open("/etc/cups/cups-files.conf", encoding="utf-8") as fh:
@@ -788,7 +867,9 @@ class Handler(BaseHTTPRequestHandler):
             if url.path == "/scenario":
                 scenario = yaml.safe_load(body) if body else {}
                 PRINTER.reset(scenario or {})
-                return self._json(200, {"loaded": (scenario or {}).get("id"), "scale": PRINTER.scale})
+                return self._json(
+                    200, {"loaded": (scenario or {}).get("id"), "scale": PRINTER.scale}
+                )
             if url.path == "/action":
                 req = json.loads(body or b"{}")
                 name = req.pop("action")
@@ -802,13 +883,21 @@ class Handler(BaseHTTPRequestHandler):
                         with open(FILES_CONF, "w", encoding="utf-8") as w:
                             w.write(DEPLOYED_FILES_CONF)
                         out.append(reload_cupsd())
-                out += [run_cmd(["cancel", "-a", "-x", QUEUE]), run_cmd(["cupsenable", QUEUE]), run_cmd(["cupsaccept", QUEUE])]
+                out += [
+                    run_cmd(["cancel", "-a", "-x", QUEUE]),
+                    run_cmd(["cupsenable", QUEUE]),
+                    run_cmd(["cupsaccept", QUEUE]),
+                ]
                 PRINTER.reset({})
-                return self._json(200, {"ok": all(r["exit"] == 0 for r in out), "steps": out})
+                return self._json(
+                    200, {"ok": all(r["exit"] == 0 for r in out), "steps": out}
+                )
             if url.path == "/cups/lp":
                 # Test helper: submit a job the way Photobooth does (lp -o landscape -o fit-to-page).
                 req = parse_qs(urlparse(self.path).query)
-                path = "/opt/selphy-sim/test-photo.jpg"  # a JPEG, like the booth's photos
+                path = (
+                    "/opt/selphy-sim/test-photo.jpg"  # a JPEG, like the booth's photos
+                )
                 if body and self.headers.get("Content-Type", "").startswith("image/"):
                     path = "/tmp/sim-upload-%d.jpg" % int(now() * 1000)
                     with open(path, "wb") as fh:
@@ -825,14 +914,26 @@ class Handler(BaseHTTPRequestHandler):
                 req = json.loads(body or b"{}")
                 conf = FILES_CONF
                 with open(conf, encoding="utf-8") as fh:
-                    lines = [l for l in fh.read().splitlines() if not l.startswith("SetEnv FAST_RETURN ")]
+                    lines = [
+                        l
+                        for l in fh.read().splitlines()
+                        if not l.startswith("SetEnv FAST_RETURN ")
+                    ]
                 if req.get("value") is not None:
                     lines.append("SetEnv FAST_RETURN %d" % int(req["value"]))
                 with open(conf, "w", encoding="utf-8") as fh:
                     fh.write("\n".join(lines) + "\n")
                 hup = reload_cupsd()
-                return self._json(200, {"ok": hup["exit"] == 0, "value": req.get("value")})
-            if url.path in ("/cups/enable", "/cups/disable", "/cups/cancel", "/cups/reject", "/cups/accept"):
+                return self._json(
+                    200, {"ok": hup["exit"] == 0, "value": req.get("value")}
+                )
+            if url.path in (
+                "/cups/enable",
+                "/cups/disable",
+                "/cups/cancel",
+                "/cups/reject",
+                "/cups/accept",
+            ):
                 req = json.loads(body or b"{}")
                 if url.path == "/cups/enable":
                     return self._json(200, run_cmd(["cupsenable", QUEUE]))
@@ -843,7 +944,14 @@ class Handler(BaseHTTPRequestHandler):
                 if url.path == "/cups/accept":
                     return self._json(200, run_cmd(["cupsaccept", QUEUE]))
                 job = req.get("job")
-                return self._json(200, run_cmd(["cancel", "%s-%s" % (QUEUE, job)] if job else ["cancel", "-a", QUEUE]))
+                return self._json(
+                    200,
+                    run_cmd(
+                        ["cancel", "%s-%s" % (QUEUE, job)]
+                        if job
+                        else ["cancel", "-a", QUEUE]
+                    ),
+                )
             return self._json(404, {"error": "not found"})
         except Exception as exc:
             traceback.print_exc()
@@ -858,7 +966,10 @@ def daemon():
         DEPLOYED_FILES_CONF = fh.read()
     threading.Thread(target=backend_server, daemon=True).start()
     srv = ThreadingHTTPServer(("0.0.0.0", CONTROL_PORT), Handler)
-    sys.stderr.write("selphy-sim: control API on :%d, backend port %d\n" % (CONTROL_PORT, BACKEND_PORT))
+    sys.stderr.write(
+        "selphy-sim: control API on :%d, backend port %d\n"
+        % (CONTROL_PORT, BACKEND_PORT)
+    )
     srv.serve_forever()
 
 
@@ -871,7 +982,10 @@ def backend_main(argv):
     out = sys.stderr
     if len(argv) == 0:
         # Device discovery (lpinfo -v / the setup's find_printer).
-        print('direct %s "Canon CP1300" "Canon SELPHY CP1300 (simulated)" "MFG:Canon;MDL:CP1300;" ""' % DEVICE_URI)
+        print(
+            'direct %s "Canon CP1300" "Canon SELPHY CP1300 (simulated)" "MFG:Canon;MDL:CP1300;" ""'
+            % DEVICE_URI
+        )
         return 0
     if len(argv) not in (5, 6):
         out.write("ERROR: Usage: sim-selphy job user title copies options [file]\n")
@@ -895,7 +1009,9 @@ def backend_main(argv):
         "data_sha256": hashlib.sha256(data).hexdigest(),
         "data_bytes": len(data),
     }
-    out.write("DEBUG: Multi-Call Dye-sublimation CUPS Backend version 0.123G (selphy-sim)\n")
+    out.write(
+        "DEBUG: Multi-Call Dye-sublimation CUPS Backend version 0.123G (selphy-sim)\n"
+    )
     out.flush()
     try:
         sock = socket.create_connection((DAEMON_HOST, BACKEND_PORT), timeout=10)
@@ -927,7 +1043,9 @@ def query_main(argv):
         with urllib.request.urlopen(host + "/query?caller=" + caller, timeout=600) as r:
             res = json.loads(r.read())
     except OSError as exc:
-        sys.stderr.write("ERROR: Printer open failure (selphy-sim unreachable: %s)\n" % exc)
+        sys.stderr.write(
+            "ERROR: Printer open failure (selphy-sim unreachable: %s)\n" % exc
+        )
         return CUPS_BACKEND_FAILED
     for line in res["lines"]:
         sys.stderr.write(line + "\n")
@@ -943,11 +1061,15 @@ def main():
         # Installed in place of the real Gutenprint USB backend: discovery for
         # the setup's entrypoint, and the standalone status query.
         if not args:
-            print('direct gutenprint53+usb://canon-cp1300/SIM0001 "Canon CP1300" "Canon SELPHY CP1300 (simulated)" "MFG:Canon;MDL:CP1300;" ""')
+            print(
+                'direct gutenprint53+usb://canon-cp1300/SIM0001 "Canon CP1300" "Canon SELPHY CP1300 (simulated)" "MFG:Canon;MDL:CP1300;" ""'
+            )
             return 0
         if args == ["-s"]:
             return query_main(args)
-        sys.stderr.write("ERROR: the simulated stack prints through sim-selphy://, not gutenprint53+usb\n")
+        sys.stderr.write(
+            "ERROR: the simulated stack prints through sim-selphy://, not gutenprint53+usb\n"
+        )
         return CUPS_BACKEND_FAILED
     if not args:
         sys.stderr.write(__doc__)
