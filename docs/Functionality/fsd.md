@@ -367,7 +367,7 @@ Decides whether the booth accepts a new print request. There is no print queue: 
 | FR-6.1 | Must | While a print request is unfinished (its last copy not `DONE` or `CANCELLED`), the booth shall reject new print requests. `[user]` | approved |
 | FR-6.12 | Must | While a CUPS printer error or `AWAIT_OPERATOR` is active, the booth shall reject new print requests. A supply count of 0 does not reject (FR-8.4). `[user]` | approved |
 | FR-6.8 | Must | The rejection shall be enforced on the server for every print entry point (result screen, gallery, any API call), regardless of when the page was loaded. `[user]` | approved |
-| FR-6.9 | Must | Print buttons on pages already open (result screen, gallery) shall show as disabled within {{T_ui}} of the booth becoming busy, and enabled again within {{T_ui}} of it becoming free. `[user]` | approved (value open) |
+| FR-6.9 | Must | Print buttons on pages already open (result screen, gallery) shall show as disabled within {{T_ui}} of the booth becoming busy, and enabled again within {{T_ui}} of it becoming free. `[user]` | approved |
 | FR-6.10 | Must | A rejected request shall create no CUPS job and shall briefly show the guest the busy notice "Drucker beschäftigt – bitte warten, bis der aktuelle Druck fertig ist" (Appendix B). `[user]` OD5 | approved |
 | FR-6.2 | Must | While printing is blocked by a CUPS printer error and no print request is unfinished, taking photos, showing the result and the QR code shall keep working. `[user]` (While a request is unfinished the print screen stays up, FR-7.14.) | approved |
 | FR-6.4 | Must | On an operator decision for a job in `ERROR` or `AWAIT_OPERATOR`, the booth shall first stop any printer status query, then make CUPS match the decision ("Foto ist da": cancel the job if still pending; "Foto fehlt": keep it), then re-enable the queue. `[user]` (Automatic decisions from the query: OD13.) | approved |
@@ -393,11 +393,11 @@ Decides whether the booth accepts a new print request. There is no print queue: 
 | FR-7.1 | Must | After the guest presses Drucken, the print screen shall show the current stage of that request until the last copy is `DONE` or `CANCELLED`. `[user]` | approved |
 | FR-7.14 | Must | While a print request is unfinished, the print screen shall offer no way to leave it, including during `ERROR` and `AWAIT_OPERATOR`; no photo can be started until it closes. `[user]` (Staff opening the admin login on the laptop, FR-12b.20, is not a guest way out.) | approved |
 | FR-7.15 | Must | When the print screen closes after the last copy is `DONE`, the booth shall show the guest start screen immediately; the result view of that photo, with its print button, shall not be shown again. `[user]` | approved |
-| FR-7.18 | Must | After the last copy of a request is `DONE` (single or multi-copy), the print screen shall show "Fertig – bitte Foto entnehmen" for {{T_take_hint}} and then close. `[user]` | approved (value open) |
-| FR-7.19 | Must | Between copies of a multi-copy request, the print screen shall show "Kopie k von N fertig – bitte Foto entnehmen" for {{T_take_hint}} and then send copy k+1, whether or not the photo has been taken. `[user]` A8 | approved (value open) |
+| FR-7.18 | Must | After the last copy of a request is `DONE` (single or multi-copy), the print screen shall show "Fertig – bitte Foto entnehmen" for {{T_take_hint}} and then close. `[user]` | approved |
+| FR-7.19 | Must | Between copies of a multi-copy request, the print screen shall show "Kopie k von N fertig – bitte Foto entnehmen" for {{T_take_hint}} and then send copy k+1, whether or not the photo has been taken. `[user]` A8 | approved |
 | FR-7.16 | Must | With `print.max_multi` > 1, the guest shall choose the number of copies in upstream's existing copies dialog (minus/plus, 1…`print.max_multi`, "Drucken" / "Abbrechen"; `assets/js/tools.js` `askCopies`). How the chosen number reaches the print stack is not yet decided. `print.max_multi` stays an admin-panel setting, unchanged. `[user]` | approved |
 | FR-7.17 | Must | Printing a photo again from the gallery shall stay possible, subject to the Busy Gate (§6); staff use it for reprints and can hide the gallery button in the admin panel. `[user]` | approved |
-| FR-7.2 | Must | Stage changes shall appear on screen within {{T_ui}} of the event reaching the booth. | approved (value open) |
+| FR-7.2 | Must | Stage changes shall appear on screen within {{T_ui}} of the event reaching the booth. | approved |
 | FR-7.3 | Must | All texts shall be German. `[user]` | approved |
 | FR-7.4 | Must | Layer stages shall be named yellow, magenta, cyan and **Schutzschicht** (clear coat; backend `LAMINATE`); the 4th stage shall never be called black/"Schwarz"/"K". `[user]` | approved |
 | FR-7.5 | Must | For a known CUPS error (Appendix B) the screen shall show its German cause. `[user]` | approved |
@@ -437,7 +437,7 @@ Tracks how much paper is left in the tray and how many prints are left on the in
 | ID | Pri | Requirement | Status |
 |---|---|---|---|
 | FR-8.1 | Must | The booth shall keep two counts, *paper left* and *prints left on the ink cassette*, and lower both by one when a copy reaches `DONE` (`Print complete` or "Foto ist da"). Apart from FR-8.10 and operator corrections (FR-8.3), no other event shall lower them. `[user]` | approved |
-| FR-8.2 | Must | When either count reaches {{LOW_THRESHOLD}}, the operator web UI and the print screen (as a staff notice) shall show a warning ("Papier fast leer – noch n Blatt" / "Farbkassette fast leer – noch n Drucke"). `[user]` | approved (value open) |
+| FR-8.2 | Must | When either count reaches {{LOW_THRESHOLD}}, the operator web UI and the print screen (as a staff notice) shall show a warning ("Papier fast leer – noch n Blatt" / "Farbkassette fast leer – noch n Drucke"). `[user]` | approved |
 | FR-8.3 | Must | On the operator web UI the operator shall be able to: set *paper left* after refilling by entering the number of sheets now in the tray; set *prints left* after changing the cassette (defaults offered: 18 sheets per paper tray, 56 prints per ink cassette `[user]` OD3, from photobooth-setup `paper-ink-counter.md`; the operator can always enter the real number); and correct either count at any time. Each change is logged (FR-14.1). `[user]` | approved |
 | FR-8.4 | Must | When *paper left* or *prints left* reaches 0, the operator web UI shall show a refill warning and the print screen a staff notice ("Papier laut Zähler leer" / "Farbkassette laut Zähler leer"); printing shall **not** be blocked: if the tray or cassette is really empty, the printer's own error stops the print (Appendix B). Counts shall not go below 0. `[user]` | approved |
 | FR-8.5 | Must | The counts shall survive a booth restart and a page reload unchanged. `[derived]` | approved |
@@ -528,7 +528,7 @@ Access reuses upstream's admin login `[user]`: the operator opens the login page
 | FR-12b.4 | Must | While a copy is in `ERROR` or `AWAIT_OPERATOR`, shall offer "Foto ist da" and "Foto fehlt"; a decision shall be sent only after a second confirmation step naming the copy ("Kopie 2 von 3: Foto ist da – bestätigen?"). `[user]` | approved |
 | FR-12b.17 | Must | The booth shall accept an operator decision only while a copy is in `ERROR` or `AWAIT_OPERATOR`. `[derived]` (was FR-10.7) | approved |
 | FR-12b.18 | Must | For each copy in `ERROR` or `AWAIT_OPERATOR`, only the first confirmed decision shall be applied, from whichever browser it came; a later decision for the same copy shall be ignored and logged, and every open printer status page shall show the decision that was applied. `[derived]` R12 (was FR-10.8) | approved |
-| FR-12b.6 | Must | Shall update within {{T_ui}} of a state change without a manual reload. | approved (value open) |
+| FR-12b.6 | Must | Shall update within {{T_ui}} of a state change without a manual reload. | approved |
 | FR-12b.7 | Must | When the page loses its connection to the booth, it shall say so ("Keine Verbindung zur Booth") and offer no decisions until it is connected again and shows current data. | proposed |
 | FR-12b.9 | Must | Texts German; layout made for phone width with touch targets large enough to use with one hand. `[user]` | approved |
 | FR-12b.10 | Should | Shall list the print requests of the current event: requested, printed and failed copies, and each operator decision (FR-14.2). | proposed |
@@ -830,13 +830,13 @@ How reliable the printer status query is gets decided at a real event, not on th
 | `T_sent_to_layer1` | max time from SENT to `Printing YELLOW`, through `FEEDING` (stall limit) | TBD (B-Q2); P-1 observed 10 s (Feeding Paper at 1 s) |
 | `T_layer` | max time between layer messages (stall limit) | TBD (B-Q2); P-1 observed 11–12 s |
 | `T_layer4_to_complete` | max time from `Printing LAMINATE` to `Print complete` (stall limit) | TBD (B-Q2); P-1 observed 12 s |
-| `T_take_hint` | how long "Fertig – bitte Foto entnehmen" stays after the last copy, and "Kopie k von N fertig – bitte Foto entnehmen" between copies | TBD (proposed: 10 s) |
+| `T_take_hint` | how long "Fertig – bitte Foto entnehmen" stays after the last copy, and "Kopie k von N fertig – bitte Foto entnehmen" between copies | **3 s** `[user]` |
 | `T_cups_poll` | max delay for a CUPS error or backend message to reach the tracker | TBD; P-1: state messages within ~1.5 s, errors (`Paper Feed (02)`, `No Ink (07)`) within ~1.6 s at a ~1.2 s poll |
 | `T_printer_poll` | interval of the printer status query while the queue is stopped | TBD (proposed: 1 s, as in P-1) |
 | `T_query_hang` | a printer status query running longer than this is stopped and retried | TBD (proposed: 20 s; P-1 hangs ~17 s) |
-| `T_ui` | max delay from event to screen (booth screen and operator web UI), and for print buttons to change state | TBD |
-| `T_resume` | max delay from operator confirmation to queue enabled | TBD |
-| `LOW_THRESHOLD` | supply count at which the low warning starts (not a timing value; FR-8.2) | TBD (proposed: 3) |
+| `T_ui` | max delay from event to screen (booth screen and operator web UI), and for print buttons to change state | **2 s** `[user]` |
+| `T_resume` | max delay from operator confirmation to queue enabled (incl. stopping a running printer query) | **5 s** `[user]` |
+| `LOW_THRESHOLD` | supply count at which the low warning starts (not a timing value; FR-8.2) | **3** `[user]` |
 | `T_cups_completed` | send → CUPS *completed*: ~17 s observed with fast return on `[code]`; with `FAST_RETURN=0` | TBD (B-Q1); P-1: fast return on 10.4 s, `FAST_RETURN=0` 57.1 s (eject at ~54.5 s) |
 
 Removed in v0.16 with the ESP32 unit: `T_sent_to_pass1`, `T_pass`, `T_eject` (replaced by the layer-message limits above), `T_rear_block`, `T_eject_settle`, `T_debounce`, `F_raw`, `T_fault`, `T_output_wait`, `T_confirm`, `T_alive`.
@@ -909,7 +909,7 @@ The panel texts (old Appendix C, first table) were removed with the panel in v0.
 
 ```yaml
 document_status: draft
-fsd_version: 0.21
+fsd_version: 0.22
 repository: starkerflamingo32/photobooth (branch booth)
 baseline_commit: e8c2cbd3
 applicable_firmware_version: n/a (no ESP32 unit since v0.16)
@@ -992,6 +992,7 @@ change_history:
   - 2026-11-27 v0.21: review block 3 — OD3 (defaults 18 sheets / 56 prints), OD4 (restore print screen, FR-7.12),
       OD5 (busy notice, FR-6.10) decided; FR-8.4 changed to warn only: a count of 0 no longer blocks printing
       (FR-6.12 narrowed)
+  - 2026-11-27 v0.22: review block 4 — T_take_hint 3 s, LOW_THRESHOLD 3, T_ui 2 s, T_resume 5 s
 superseded_requirements:
   # v0.21
   - FR-8.4 v0.20 (count 0 blocks new prints and holds the next copy) — warning only (FR-8.4 v0.21)
