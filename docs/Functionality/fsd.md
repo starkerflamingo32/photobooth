@@ -8,7 +8,7 @@
 |---|---|
 | Created | 2026-11-23 |
 | Last updated | 2026-11-27 |
-| Load defined | **No** — B-1 done 2026-11-27 (§17.3.2), Appendix A complete, all owner decisions made except the R18 mitigation (`proposed`, §4.1). Still missing: R18 decided; Method/UserDocumentation planes; the full gate check of every Must/Should contract (`/define` §12.5). Not blocking: print-limit characterisation (§17.5) runs in Phase 1, since it needs the virtual test setup and FR-8.8 already states the requirement; auto-resume (FR-6.15) is checked at the first event (E-1, §17.6). |
+| Load defined | **No** — B-1 done 2026-11-27 (§17.3.2), Appendix A complete, all owner decisions made (R18 decided in v0.29). Still missing: the wording of one new operator text (Appendix C, `proposed`); Method/UserDocumentation planes; the full gate check of every Must/Should contract (`/define` §12.5). Not blocking: print-limit characterisation (§17.5) runs in Phase 1, since it needs the virtual test setup and FR-8.8 already states the requirement; auto-resume (FR-6.15) is checked at the first event (E-1, §17.6). |
 
 Full lifecycle metadata: Appendix D.
 
@@ -173,7 +173,7 @@ Dependencies point downward only. §10–§12 (unit interface, ESP32 sensor unit
 | R13 | The fork is public and photobooth-setup is private: the fork's CI needs a token to build the stack, and test artifacts are visible to others. | Read-only fine-grained token on photobooth-setup only, as an Actions secret; synthetic test data only (§17.1.1, §17.2). |
 | R14 | While the queue is stopped, only a standalone status query (`gutenprint53+usb -s`) can see the printer print the held photo `[code]` P-1. It reconnects to the printer each time and twice per print hung ~17 s (`libusb error -7`) at a layer change; layer names around a hang were wrong. A query on the USB device while a CUPS backend prints could disturb the print. It needs root. | Use only *printing → Idle* from it, never layer names (FR-9.8); query only while the queue is disabled, never while a backend is attached or during `cupsenable` (FR-9.7); a hang is not an error (FR-9.9); root limited to this one command (NFR-15.4). It also shows a lost photo: after the ink-sheet error and a power cycle the printer went straight to *Idle* without printing (P-1 job 123). Decides on its own only on clean evidence and with the switch on (FR-6.15). |
 | R15 | Provoking a jam by hand does not give a clean jam: holding the sheet made the gears slip and **tore the ink sheet** (P-1 job 123), costing a cassette. `[code]` | No provoked jam of any kind in B-1 (no hand-held sheet, no spent cassette); a real jam is recorded if one happens during any print (§17.3). `[user]` approved |
-| R18 | **A job the printer already holds cannot be cancelled from CUPS.** `cancel` removes the job only from CUPS; the printer keeps it and prints it as soon as the cause is fixed. B-1 job 126: resent by `cupsenable` into a missing tray (`No Paper (03)`), cancelled in CUPS, tray back in → the printer printed it a second time. Only a power cycle clears a held job (A4, P-1 job 123, owner report on jams). `[code]` | Never resend a copy while the printer may still hold it (FR-6.4). A manual "Foto fehlt" while the printer query does not show *Idle* without an error is at risk: the printer may still print the held photo after the fix, and the resend duplicates it. Mitigation `proposed`: before applying a manual "Foto fehlt", the printer status page shows the last query result and, unless the printer is *Idle* with no error, asks the operator to switch the printer off and on first. |
+| R18 | **A job the printer already holds cannot be cancelled from CUPS.** `cancel` removes the job only from CUPS; the printer keeps it and prints it as soon as the cause is fixed. B-1 job 126: resent by `cupsenable` into a missing tray (`No Paper (03)`), cancelled in CUPS, tray back in → the printer printed it a second time. Only a power cycle clears a held job (A4, P-1 job 123, owner report on jams). `[code]` | Never resend a copy while the printer may still hold it (FR-6.4). A manual "Foto fehlt" while the printer query does not show *Idle* without an error is at risk: the printer may still print the held photo after the fix, and the resend duplicates it. Before a manual "Foto fehlt" is applied while the printer is not *Idle* without an error, the operator is asked to switch the printer off and on first (FR-12b.22). `[user]` approved |
 | R17 | Stages and "done" now rest on the backend's message texts (`Printing YELLOW`, `Print complete`, …); a Gutenprint update could change them. `[derived]` | Gutenprint version pinned on the booth (§4.3); texts recorded in P-1/B-1 are test fixtures (§17.1); unknown messages are logged and never move a copy to `DONE` (FR-5.4). |
 
 R4 (IR misreads) and R6 (ESP32 on the shared USB hub) were removed with the ESP32 unit in v0.16; R16 (photo left on the tray) in v0.17, since it does no harm (A8).
@@ -199,9 +199,9 @@ R4 (IR misreads) and R6 (ESP32 on the shared USB hub) were removed with the ESP3
 
 ### 4.4 Open decisions
 
-Open (v0.28): **R18 mitigation** — before a manual "Foto fehlt" is applied while the printer query does not show *Idle* without an error, ask the operator to switch the printer off and on (proposed, §4.1).
+None open (v0.29). Decided and removed decisions, for traceability:
 
-Decided and removed decisions, for traceability:
+Decided in v0.29: R18 mitigation — power cycle before a manual "Foto fehlt" unless the printer is *Idle* without an error (FR-12b.22). `[user]`
 
 OD1 (ESP32 unit offline), OD2 (IR events without a job) and OD8 (panel while the booth is unreachable) were removed with the ESP32 unit in v0.16.
 
@@ -573,6 +573,7 @@ Access reuses upstream's admin login `[user]`: the operator opens the login page
 | FR-12b.20 | Must | The printer status page shall also be usable on the booth laptop itself, reached the same way as on the phone (admin login → menu → "Drucker"), with the same content, decisions and confirmation step; no hidden gesture or separate staff screen. `[user]` OD12 | approved |
 | FR-12b.19 | Should | Shall show a warning when the startup check finds `FAST_RETURN=0` missing (NFR-13.4): "Druckstatus unzuverlässig – FAST_RETURN nicht gesetzt". `[derived]` R2 | approved |
 | FR-12b.21 | Must | The printer status page shall have a switch "Automatisch fortsetzen" (auto-resume, FR-6.15) on / off (manual resume). Default on; the setting survives a booth restart, applies from the next decision (a copy already waiting is evaluated again when it is switched on), is logged with time and browser, and is shown on every open printer status page. `[user]` OD13 | approved |
+| FR-12b.22 | Must | When the operator chooses "Foto fehlt" and the latest printer status query result is anything other than *Idle* with no printer error (error still active, *printing*, *no answer*, or no result yet), the printer status page shall show the power-cycle prompt (Appendix C) and shall apply "Foto fehlt" only after the operator confirms that the printer was switched off and on; that confirmation is logged with the decision (FR-14.1). `[user]` R18 | approved |
 
 | ID | Precondition · stimulus | Expected observation | Must NOT happen | Tier |
 |---|---|---|---|---|
@@ -590,6 +591,9 @@ Access reuses upstream's admin login `[user]`: the operator opens the login page
 | FR-12b.12 | Any state | no cancel / enable buttons | queue re-enabled from the web UI | integration |
 | FR-12b.20 | Booth browser, `ERROR`, Wi-Fi off · admin login on the laptop → menu → "Drucker" → "Foto ist da", confirm | decision applied; queue re-enabled; guest print screen continues afterwards | page needs the phone; decision refused | e2e |
 | FR-12b.21 | Switch auto-resume off on the phone · restart booth | still off on every printer page; next error waits for the operator | reset to on; automatic decision | integration |
+| FR-12b.22 | `ERROR` `Paper Feed (02)`, simulated query: error still active · operator "Foto fehlt" | power-cycle prompt; copy resent only after "aus- und eingeschaltet" is confirmed; confirmation logged | copy resent without the prompt | integration |
+| FR-12b.22 | `ERROR`, simulated query: *Idle*, no error · operator "Foto fehlt" | normal confirmation (Appendix C), no power-cycle prompt, copy resent once | power-cycle prompt shown | integration |
+| FR-12b.22 | Power-cycle prompt shown · operator closes it | copy stays in `ERROR`, nothing resent | copy resent; decision logged | integration |
 
 ---
 
@@ -975,6 +979,7 @@ Removed in v0.16 with the ESP32 unit: `T_sent_to_pass1`, `T_pass`, `T_eject` (re
 | Automatic decision (FR-6.15) | Automatisch entschieden: Foto ist da – Drucker hat gedruckt (hh:mm:ss) / Foto fehlt – Drucker meldet keinen Druck |
 | Auto-resume switch (FR-12b.21) | Automatisch fortsetzen: an / aus |
 | FAST_RETURN missing (FR-12b.19) | Druckstatus unzuverlässig – FAST_RETURN nicht gesetzt |
+| Power cycle before "Foto fehlt" (FR-12b.22) — `proposed` | Der Drucker hat das Foto vielleicht noch und druckt es nach dem Beheben. Bitte Drucker aus- und wieder einschalten. · Drucker wurde aus- und eingeschaltet – Foto fehlt bestätigen |
 | After "Foto fehlt" (FR-8.10) | Blatt verbraucht? · Ja / Nein *(Ja: Papier −1, bei begonnenem Druck auch Farbe −1)* |
 
 The panel texts (old Appendix C, first table) were removed with the panel in v0.16.
@@ -983,7 +988,7 @@ The panel texts (old Appendix C, first table) were removed with the panel in v0.
 
 ```yaml
 document_status: draft
-fsd_version: 0.28
+fsd_version: 0.29
 repository: starkerflamingo32/photobooth (branch booth)
 baseline_commit: e8c2cbd3
 applicable_firmware_version: n/a (no ESP32 unit since v0.16)
@@ -1083,6 +1088,8 @@ change_history:
       T_query_hang 25 s (hangs 18 s); R7 at 4 of 5 clean prints, accepted; new §8b Print Image (FR-8b.1–8b.3,
       prescale to the 1248 x 1871 CUPS raster, algorithm normative) [user]; R18: a held job cannot be cancelled
       from CUPS (duplicate in B-1 job 126), mitigation proposed
+  - 2026-11-27 v0.29: R18 mitigation approved [user] — power cycle before a manual "Foto fehlt" unless the printer
+      is Idle without an error (FR-12b.22); operator text proposed (Appendix C)
 superseded_requirements:
   # v0.28
   - T_query_hang 20 s (v0.27) — 25 s; print path `lp -o landscape -o fit-to-page <camera JPEG>` — §8b
@@ -1141,7 +1148,7 @@ superseded_requirements:
   - FR-10.3 v0.1, FR-10.4 (CUPS-only fallback stages) — replaced by OD1
   - NFR-12.2 (some mechanism re-enables the queue) — booth reconciliation (FR-6.4, FR-6.11)
   - FR-13.x → FR-14.x (renumbered with the new §12)
-open_decisions: R18 mitigation (proposed)
+open_decisions: none open (Appendix C text for FR-12b.22 proposed)
 related_test_baseline: P-1 2026-11-26 (pre-bench, §17.3.1); B-1 2026-11-27 (jobs 125–129, §17.3.2); E-1 and §17.5 not run
 ```
 
