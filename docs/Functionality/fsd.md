@@ -8,7 +8,7 @@
 |---|---|
 | Created | 2026-11-23 |
 | Last updated | 2026-11-27 |
-| Load defined | **No** — all requirements approved and all owner decisions made (review 2026-11-27, v0.19–v0.24). Still missing: bench session B-1 (§17.3; P-1 done, B-Q1–B-Q5 answered for one sample each), which fills the measured timing values (Appendix A: stall limits, `T_cups_poll`); print-limit characterisation (§17.5, needs Phase 1); Method/UserDocumentation planes not created yet. Auto-resume (FR-6.15) is checked at the first event (E-1, §17.6); that does not block "defined". |
+| Load defined | **No** — all requirements approved, all owner decisions made, no `(assumed)` left on anything architecture-critical (v0.27). Still missing: bench session B-1 (§17.3), run now ahead of Phase 1 because it needs only the real printer and the logger; it fills the five measured values in Appendix A (stall limits, `T_cups_poll`, `T_cups_completed`); Method/UserDocumentation planes not created yet. Not blocking: print-limit characterisation (§17.5) runs in Phase 1, since it needs the virtual test setup and FR-8.8 already states the requirement; auto-resume (FR-6.15) is checked at the first event (E-1, §17.6). |
 
 Full lifecycle metadata: Appendix D.
 
@@ -52,7 +52,7 @@ The goal: each photo is printed exactly once, only one print runs at a time, and
 - Choosing implementation or code structure — decided later. `[user]`
 - Sensors on the paper path (ESP32 unit, IR barriers) and a hardware operator panel: removed in v0.16. `[user]`
 - Languages other than German. `[user]`
-- Supporting printers other than the SELPHY CP1300. (assumed)
+- Supporting printers other than the SELPHY CP1300. `[user]` (A2)
 - Changing how photos are taken, uploaded or shared.
 - A fixed print limit ("N prints, then stop"): not used and not built; the booth is not rented out. Upstream's limit stays off (FR-8.8). `[user]`
 - Auto-print (`print.auto`, `print.auto_delay`): out of scope until characterised (§17.5). `[user]`
@@ -110,7 +110,7 @@ The phone is the operator's main interface; the same page on the booth laptop is
 | Booth host | Acer Switch 3, Debian 12, native Photobooth install | `[code]` |
 | Paper path | During each pass the sheet comes out at the back, then at the front, and goes fully back inside at both sides; the finished print is ejected at the front onto the output tray | `[user]` |
 | Shared USB hub | Printer and camera share one USB hub on the laptop | `[code]` |
-| Booth router | Router inside the booth, always on during an event; its Wi-Fi is joined only by the booth laptop and the operator's phone, never by guests. Whether it is the same LTE router that carries the photo uploads: (assumed) yes | `[user]` |
+| Booth router | Router inside the booth, always on during an event; its Wi-Fi is joined only by the booth laptop and the operator's phone, never by guests. It is the same LTE router that carries the photo uploads | `[user]` |
 | Operator phone | Any current smartphone browser; no app installed | `[user]` / (assumed) |
 
 ### 2.3 Software architecture
@@ -148,7 +148,7 @@ Dependencies point downward only. §10–§12 (unit interface, ESP32 sensor unit
 |---|---|---|---|
 | **1 — Virtual test setup** | §17.1: simulated SELPHY backend that emits the backend's stage messages, can inject SELPHY errors and pending/stopped-queue states, and answers printer status queries; browser test setup (§17.1.1); workflows (§17.2) | Every unit, integration and e2e test in this FSD can be run without hardware, in GitHub Actions; §17.5 run against upstream | — |
 | **2 — Booth logic + operator web UI + supply counters** | §5, §6, §7, §8, §9, §12b against the virtual test setup | All unit and integration tests pass; exactly-once contracts (§5.4) pass in simulation, with decisions made on the web UI | Phase 1 |
-| **3 — Bench session** | Bench session B-1 (§17.3) on the real SELPHY | B-1 run; B-Q1…B-Q5 answered (B-Q6 if seen); Appendix A filled | Phase 2 |
+| **3 — Bench session** | Bench session B-1 (§17.3) on the real SELPHY; run ahead of Phase 1 for Load defined, since it needs only the printer and the logger `[user]` | B-1 run; B-Q1…B-Q5 answered (B-Q6 if seen); Appendix A filled | Phase 2 |
 | **4 — Acceptance** | §17.4 on the real booth | Acceptance list passes | Phase 3 |
 | **5 — First event** | Event observation E-1 (§17.6): printer query logged next to every operator decision | E-Q1 answered; auto-resume default confirmed or changed | Phase 4 |
 
@@ -172,7 +172,7 @@ Dependencies point downward only. §10–§12 (unit interface, ESP32 sensor unit
 | R12 | Two browsers (two staff phones, or two tabs) give conflicting decisions. | First confirmed decision wins; later ones are ignored and every operator page shows the decision made (FR-12b.18). |
 | R13 | The fork is public and photobooth-setup is private: the fork's CI needs a token to build the stack, and test artifacts are visible to others. | Read-only fine-grained token on photobooth-setup only, as an Actions secret; synthetic test data only (§17.1.1, §17.2). |
 | R14 | While the queue is stopped, only a standalone status query (`gutenprint53+usb -s`) can see the printer print the held photo `[code]` P-1. It reconnects to the printer each time and twice per print hung ~17 s (`libusb error -7`) at a layer change; layer names around a hang were wrong. A query on the USB device while a CUPS backend prints could disturb the print. It needs root. | Use only *printing → Idle* from it, never layer names (FR-9.8); query only while the queue is disabled, never while a backend is attached or during `cupsenable` (FR-9.7); a hang is not an error (FR-9.9); root limited to this one command (NFR-15.4). It also shows a lost photo: after the ink-sheet error and a power cycle the printer went straight to *Idle* without printing (P-1 job 123). Decides on its own only on clean evidence and with the switch on (FR-6.15). |
-| R15 | Provoking a jam by hand does not give a clean jam: holding the sheet made the gears slip and **tore the ink sheet** (P-1 job 123), costing a cassette. `[code]` | B-1 print 5: no hand-held jam; use a spent or damaged cassette, or record a real jam when one happens (§17.3). `proposed` |
+| R15 | Provoking a jam by hand does not give a clean jam: holding the sheet made the gears slip and **tore the ink sheet** (P-1 job 123), costing a cassette. `[code]` | No provoked jam of any kind in B-1 (no hand-held sheet, no spent cassette); a real jam is recorded if one happens during any print (§17.3). `[user]` approved |
 | R17 | Stages and "done" now rest on the backend's message texts (`Printing YELLOW`, `Print complete`, …); a Gutenprint update could change them. `[derived]` | Gutenprint version pinned on the booth (§4.3); texts recorded in P-1/B-1 are test fixtures (§17.1); unknown messages are logged and never move a copy to `DONE` (FR-5.4). |
 
 R4 (IR misreads) and R6 (ESP32 on the shared USB hub) were removed with the ESP32 unit in v0.16; R16 (photo left on the tray) in v0.17, since it does no harm (A8).
@@ -180,9 +180,9 @@ R4 (IR misreads) and R6 (ESP32 on the shared USB hub) were removed with the ESP3
 ### 4.2 Assumptions
 
 - A1 For each print the backend reports exactly 4 layer stages, in the order `Printing YELLOW`, `MAGENTA`, `CYAN`, `LAMINATE`, then `Print complete`. `[code]` one sample in P-1 (job 119) — B-Q2
-- A2 Only one printer (`selphy`) is used. (assumed)
-- A3 The booth host's clock is the time reference for all timeouts. (assumed)
-- A4 After a printer error the printer has already received the job. **P-1 (§17.3.1) `[code]`:** for an empty paper tray and a missing ink cassette the printer printed the held photo **by itself** as soon as the cause was fixed (it senses the tray and the cassette); no button press, 4 times. **Ink-sheet error** (`Unknown Error (0c)`, ink sheet torn): the printer needs a power cycle, after which it is *Idle* and **the held photo is lost**, so resending is correct. So a printer can be cleared without printing (power cycle). FR-7.7 and the Appendix B staff hints were revised accordingly in v0.20. Other errors (real jam, `Ink Cassette Empty (06)`): B-Q4.
+- A2 Only one printer (`selphy`, a SELPHY CP1300) is used. `[user]`
+- A3 The booth host's clock is the time reference for all timeouts. `[user]`
+- A4 After a printer error the printer has already received the job. **P-1 (§17.3.1) `[code]`:** for an empty paper tray and a missing ink cassette the printer printed the held photo **by itself** as soon as the cause was fixed (it senses the tray and the cassette); no button press, 4 times. **Ink-sheet error** (`Unknown Error (0c)`, ink sheet torn): the printer needs a power cycle, after which it is *Idle* and **the held photo is lost**, so resending is correct. So a printer can be cleared without printing (power cycle). FR-7.7 and the Appendix B staff hints were revised accordingly in v0.20. **Real paper jam** `[user]`: the printer's display asks for a power cycle to clear it, and the printer cancels the held job during the restart, so the photo is lost and resending is correct (as for the ink-sheet error; FR-6.15 case (b)). Not yet logged on the bench. Other errors (`Ink Cassette Empty (06)`): B-Q4.
 - A5 Only one job is ever inside the printer at a time, because the booth sends the next copy only after the previous one is `DONE` (FR-5.11). `[derived]`
 - A6 The fast-return behaviour read in the Gutenprint master source matches the installed 5.3.4. `[code]` confirmed in P-1 (§17.3.1): fast return on → backend exits when printing starts; `FAST_RETURN=0` → backend stays until "Print complete".
 - A7 Once `Printing YELLOW` has been reported for a copy, its ink panel set is used up even if the sheet is then lost; before it, no ink is used. (assumed — B-Q4) (P-1: the first rear pass comes ~3 s before `Printing YELLOW`.)
@@ -597,14 +597,14 @@ Configured, not owned: the `selphy` queue (photobooth-setup `native/setup-printe
 
 ## 15. Security
 
-Threat model: physical booth at a private event; the operator web UI on the booth Wi-Fi, which only the laptop and the operator phone join `[user]`; a root-run printer status query on the laptop. Accepted risk: someone with physical access can operate the printer and the laptop. (assumed)
+Threat model: physical booth at a private event; the operator web UI on the booth Wi-Fi, which only the laptop and the operator phone join `[user]`; a root-run printer status query on the laptop. Accepted risk: someone with physical access can operate the printer and the laptop. `[user]`
 
 | ID | Pri | Requirement | Status |
 |---|---|---|---|
 | NFR-15.1 | Must | The booth Wi-Fi shall be WPA2 (or better) with a password known only to staff; guests are never given it. `[user]` | approved |
 | NFR-15.2 | Must | The operator web UI shall require the upstream admin login (FR-12b.2), also from the booth Wi-Fi; at events `login.enabled` and admin protection (`protect.admin`) shall be on. A localhost exception for the booth laptop itself (`protect.localhost_admin` off) is allowed, as for the admin panel. `[derived]` R11 | approved |
 | NFR-15.3 | Must | The operator web UI shall not be reachable from the internet (no port forwarding, not exposed through the public photo/QR host). `[derived]` | approved |
-| NFR-15.4 | Must | The few commands the print stack needs as root (the printer status query) may run as root without a password, each as a fixed command line with no arguments taken from the web side; photobooth-setup installs the permission. The web server gets no general root rights. `[user]` R14 | approved |
+| NFR-15.4 | Must | The few commands the print stack needs as root (the printer status query) may run as root without a password, each as a fixed command line with no arguments taken from the web side, all listed in one dedicated sudoers drop-in file (`NOPASSWD`) that photobooth-setup installs; no other root permission is granted to the web server user. `[user]` R14 | approved |
 
 ---
 
@@ -679,7 +679,7 @@ All workflows run in the fork. `[user]`
 
 Five prints answer the `FAST_RETURN=0` safety question and all real-printer questions without wasting paper. `[user]` Since v0.16 no sensor unit is needed; B-1 can run as soon as the logger is ready (it is, from P-1).
 
-**Preconditions:** `FAST_RETURN=0` set for CUPS (checked in each run's `envp`); CUPS `LogLevel debug`; `testing/bench/cups-poll-test.sh` logging CUPS state and backend messages about every second, and its `printer-poll` mode for the printer query while the queue is stopped; rear passes and the eject marked by key press; booth lighting as at an event; phone video of the printer front and back.
+**Preconditions:** `selphy-autoresume` stopped and disabled (it would re-enable the queue by itself); `FAST_RETURN=0` set for CUPS (checked in each run's `envp`); CUPS `LogLevel debug`; `testing/bench/cups-poll-test.sh` logging CUPS state and backend messages about every second, and its `printer-poll` mode for the printer query while the queue is stopped; rear passes and the eject marked by key press; booth lighting as at an event; phone video of the printer front and back.
 
 | # | Print | Questions answered |
 |---|---|---|
@@ -687,9 +687,11 @@ Five prints answer the `FAST_RETURN=0` safety question and all real-printer ques
 | 2 | Normal print (second timing sample) | B-Q1, B-Q2 |
 | 3 | Paper tray empty at start; after the error: refill, wait for the printer to print by itself (press its print button only if it does not) | B-Q3, B-Q4, B-Q5 |
 | 4 | Ink cassette removed at start; after the error: reinsert, as print 3 | B-Q3, B-Q4, B-Q5 |
-| 5 | A real jam if one happens during B-1, or an ink-sheet error with a spent cassette (no hand-held jam, R15); then follow the printer's display | B-Q3, B-Q4, B-Q5 |
+| 5 | Normal print (third timing sample) | B-Q1, B-Q2 |
 
-**Duplicate check without paper (prints 3–5):** after the photo has come out, remove the paper tray, then run `cupsenable selphy`. If CUPS sends the job again, the printer reports a paper error instead of printing, which shows the duplicate without using a sheet. Then cancel the job.
+No jam is provoked (R15). If a real jam happens during any print, follow the printer's display (power cycle), log it with the printer query running, and answer B-Q3…B-Q5 for it.
+
+**Duplicate check without paper (prints 3–4, and a real jam if one happens):** after the photo has come out, remove the paper tray, then run `cupsenable selphy`. If CUPS sends the job again, the printer reports a paper error instead of printing, which shows the duplicate without using a sheet. Then cancel the job.
 
 **Questions:**
 
@@ -843,8 +845,8 @@ How reliable the printer status query and auto-resume (FR-6.15) are gets checked
 | `T_layer4_to_complete` | max time from `Printing LAMINATE` to `Print complete` (stall limit) | TBD (B-Q2); P-1 observed 12 s |
 | `T_take_hint` | how long "Fertig – bitte Foto entnehmen" stays after the last copy, and "Kopie k von N fertig – bitte Foto entnehmen" between copies | **3 s** `[user]` |
 | `T_cups_poll` | max delay for a CUPS error or backend message to reach the tracker | TBD; P-1: state messages within ~1.5 s, errors (`Paper Feed (02)`, `No Ink (07)`) within ~1.6 s at a ~1.2 s poll |
-| `T_printer_poll` | interval of the printer status query while the queue is stopped | TBD (proposed: 1 s, as in P-1) |
-| `T_query_hang` | a printer status query running longer than this is stopped and retried | TBD (proposed: 20 s; P-1 hangs ~17 s) |
+| `T_printer_poll` | interval of the printer status query while the queue is stopped | **1 s** `[user]` (as in P-1) |
+| `T_query_hang` | a printer status query running longer than this is stopped and retried | **20 s** `[user]` (P-1 hangs ~17 s) |
 | `T_ui` | max delay from event to screen (booth screen and operator web UI), and for print buttons to change state | **2 s** `[user]` |
 | `T_resume` | max delay from operator confirmation to queue enabled (incl. stopping a running printer query) | **5 s** `[user]` |
 | `LOW_THRESHOLD` | supply count at which the low warning starts (not a timing value; FR-8.2) | **3** `[user]` |
@@ -925,7 +927,7 @@ The panel texts (old Appendix C, first table) were removed with the panel in v0.
 
 ```yaml
 document_status: draft
-fsd_version: 0.26
+fsd_version: 0.27
 repository: starkerflamingo32/photobooth (branch booth)
 baseline_commit: e8c2cbd3
 applicable_firmware_version: n/a (no ESP32 unit since v0.16)
@@ -1017,7 +1019,13 @@ change_history:
       rows for 0a, 08 ("Incorrect Ink loaded" upstream, seen at the 2026-11-22 event) and 05; 0c is "Ink jam" upstream
   - 2026-11-27 v0.26: OD13 decided — auto-resume (middle option) in force now (FR-6.15), switch "Automatisch
       fortsetzen" on the printer page, default on (FR-12b.21); E-1 now checks auto-resume and sets the default
+  - 2026-11-27 v0.27: review of the simple open items — T_printer_poll 1 s, T_query_hang 20 s; A2, A3, booth router
+      (same LTE router), §15 threat model confirmed [user]; NFR-15.4 root commands in one sudoers drop-in file;
+      R15: no provoked jam at all, B-1 print 5 is a third normal print; real jam → power cycle cancels the held job
+      (A4); B-1 runs now, ahead of Phase 1; §17.5 no longer blocks Load defined
 superseded_requirements:
+  # v0.27
+  - R15 mitigation v0.15 and B-1 print 5 v0.15 (spent cassette or real jam) — no provoked jam; print 5 normal
   # v0.26
   - OD13 v0.18–v0.25 (evidence only until E-1, middle option as proposed result) — auto-resume in force now with a switch (FR-6.15, FR-12b.21)
   # v0.21

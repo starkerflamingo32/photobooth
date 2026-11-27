@@ -5,7 +5,8 @@
 #
 # Run on the booth laptop:
 #   sudo ./cups-poll-test.sh prepare      # FAST_RETURN=0 + LogLevel debug, restart CUPS
-#   ./cups-poll-test.sh run <image.jpg>   # poll, send one print, mark events by key
+#   ./cups-poll-test.sh run <image.jpg> [label]  # poll, send one print, mark events by key
+#                                         # label names the folder, e.g. b1-p3-empty-tray
 #   ./cups-poll-test.sh watch <dir> [job]  # poll again without sending (duplicate check after run)
 #   sudo ./cups-poll-test.sh collect <dir> # copy the CUPS error_log for the run (redacted)
 #   sudo ./cups-poll-test.sh printer-poll <dir> # queue stopped: ask the printer itself (Ctrl-C before cupsenable)
@@ -24,9 +25,18 @@ TAIL_AFTER=60    # keep polling this long after the job leaves processing
 
 now() { date +%H:%M:%S.%3N; }
 need_root() { [ "$(id -u)" -eq 0 ] || { echo "Run with sudo: sudo $0 $*" >&2; exit 1; }; }
+# selphy-autoresume re-enables a stopped queue by itself: it would resend held jobs
+# and break the duplicate check (FSD §17.3 precondition, FR-6.11).
+check_autoresume() {
+    if systemctl is-active --quiet selphy-autoresume 2>/dev/null; then
+        echo "selphy-autoresume is running; stop it first: sudo systemctl disable --now selphy-autoresume" >&2
+        exit 1
+    fi
+}
 
 prepare() {
     need_root prepare
+    check_autoresume
     if lpstat -W not-completed -o "$QUEUE" | grep -q .; then
         echo "Queue $QUEUE has unfinished jobs; clear them first (lpstat -o)." >&2
         exit 1
@@ -131,12 +141,13 @@ EOF
 }
 
 run() {
-    local img=${1:?usage: $0 run <image.jpg>}
+    local img=${1:?usage: $0 run <image.jpg> [label]} label=${2:-poll-test}
+    check_autoresume
     [ -r "$img" ] || { echo "Cannot read $img" >&2; exit 1; }
     if lpstat -W not-completed -o "$QUEUE" | grep -q .; then
         echo "Queue $QUEUE has unfinished jobs; clear them first." >&2; exit 1
     fi
-    OUT=~/poll-test-$(date +%Y%m%d-%H%M%S)
+    OUT=~/$label-$(date +%Y%m%d-%H%M%S)
     mkdir -p "$OUT"
     JOB=0
     write_ipp_tests

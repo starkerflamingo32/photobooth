@@ -1,0 +1,93 @@
+# Bench session B-1 — procedure
+
+FSD §17.3. Five prints on the real SELPHY CP1300 with `FAST_RETURN=0`. Fills the
+measured values in FSD Appendix A and answers B-Q1…B-Q5.
+
+Uses 5 sheets and 5 ink panels. No jam is provoked (R15); a real jam is logged if
+one happens.
+
+## Before you start
+
+- Booth laptop on, SELPHY on USB, full paper tray (≥ 5 sheets), ink cassette with
+  ≥ 5 prints left. Booth lighting as at an event.
+- `cups-poll-test.sh` is in `~/` on the laptop (all commands below run in `~/`).
+- One test photo, e.g. `~/b1.jpg`. Use the same JPG for all five prints.
+- Two terminals open on the laptop: **A** (prints) and **B** (printer query, sudo).
+- Phone on a stand, filming the printer front and back. At the start of each print, film
+  the laptop clock once.
+
+```sh
+sudo systemctl disable --now selphy-autoresume   # must not run (re-enables the queue)
+cancel -a selphy                                 # queue empty
+sudo ./cups-poll-test.sh prepare                 # FAST_RETURN=0 + LogLevel debug
+```
+
+`prepare` must print `cups-files.conf: SetEnv FAST_RETURN 0`.
+
+## Keys while a print runs (terminal A)
+
+| Key | When |
+|---|---|
+| `p` | the sheet comes out at the **back** (once per pass, 4× per print) |
+| `e` | the finished photo is **ejected at the front** |
+| `f` | you fixed the cause (tray refilled / cassette back in) |
+| `b` | you pressed the printer's own print button |
+| `t` / `i` | paper tray removed / put back |
+| `x` | something odd: type a short note |
+| `q` | stop polling |
+
+Press the key the moment you see the event: the timings are taken from your key presses.
+
+## Prints 1, 2, 5 — normal print
+
+```sh
+./cups-poll-test.sh run ~/b1.jpg b1-p1-normal      # p2: b1-p2-normal, p5: b1-p5-normal
+```
+
+1. Press Enter to send. Press `p` on every rear pass and `e` on the eject.
+2. Polling stops by itself 60 s after the job is *completed* (only once `e` has been pressed).
+3. `sudo ./cups-poll-test.sh collect ~/b1-p1-normal-*` → it must say
+   `OK: the backend got FAST_RETURN=0`.
+
+## Prints 3 and 4 — error, fix, duplicate check
+
+Print 3: put the paper tray in **empty**. Print 4: take the **ink cassette out**
+(full paper tray in).
+
+```sh
+./cups-poll-test.sh run ~/b1.jpg b1-p3-empty-tray    # p4: b1-p4-no-ink
+```
+
+1. **A:** press Enter. Wait for the error (`Paper Feed (02)` or `No Ink (07)`, printer *stopped*).
+   Do not press `q`.
+2. **B:** `sudo ./cups-poll-test.sh printer-poll ~/b1-p3-empty-tray-*`
+3. Fix the cause (refill and insert the tray / put the cassette back), then press `f` in **A**.
+4. The printer should print the held photo by itself. Mark `p` / `e` in **A**.
+   Only if nothing happens for 1 minute: press the printer's print button, then `b`.
+5. Photo out: **B:** Ctrl-C (always **before** any `cupsenable`). **A:** `q`.
+
+**Duplicate check** (no paper used):
+
+6. **A:** `./cups-poll-test.sh watch ~/b1-p3-empty-tray-*`
+7. Pull the paper tray out, then press `t` in **A**.
+8. **B:** `cupsenable selphy` (add `sudo` if it is refused).
+9. Watch **A**: if the job goes *processing* and then `No Paper (03)`, CUPS resent it,
+   which means it would have been a **duplicate**. Press `x` and note what you saw.
+10. **B:** `cancel -a selphy`. Put the tray back in and press `i`, then `q` in **A**.
+11. `sudo ./cups-poll-test.sh collect ~/b1-p3-empty-tray-*`
+
+## If a real jam happens (any print)
+
+Do not stop **A**. Start the printer query in **B** as in step 2. Press `x` and note
+"jam". Follow the printer's display (switch it off and on, clear the sheet), press `f`.
+Note whether the printer printed anything afterwards. Then do the duplicate check
+(steps 5–11).
+
+## After the session
+
+```sh
+sudo ./cups-poll-test.sh restore --keep-fast-return-off   # LogLevel back, FAST_RETURN=0 kept
+```
+
+Leave the laptop on and on the network; the run folders `~/b1-*` get copied from there
+to fill FSD Appendix A. Also write down sheets used and anything odd.
