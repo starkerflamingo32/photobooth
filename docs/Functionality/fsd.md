@@ -181,7 +181,7 @@ R4 (IR misreads) and R6 (ESP32 on the shared USB hub) were removed with the ESP3
 - A1 For each print the backend reports exactly 4 layer stages, in the order `Printing YELLOW`, `MAGENTA`, `CYAN`, `LAMINATE`, then `Print complete`. `[code]` one sample in P-1 (job 119) — B-Q2
 - A2 Only one printer (`selphy`) is used. (assumed)
 - A3 The booth host's clock is the time reference for all timeouts. (assumed)
-- A4 After a printer error the printer has already received the job. **P-1 (§17.3.1) `[code]`:** for an empty paper tray and a missing ink cassette the printer printed the held photo **by itself** as soon as the cause was fixed (it senses the tray and the cassette); no button press, 4 times. **Ink-sheet error** (`Unknown Error (0c)`, ink sheet torn): the printer needs a power cycle, after which it is *Idle* and **the held photo is lost**, so resending is correct. So a printer can be cleared without printing (power cycle). FR-7.7 and the Appendix B staff hints must be revised (proposal in Appendix B). Other errors (real jam, `Ink Cassette Empty (06)`): B-Q4.
+- A4 After a printer error the printer has already received the job. **P-1 (§17.3.1) `[code]`:** for an empty paper tray and a missing ink cassette the printer printed the held photo **by itself** as soon as the cause was fixed (it senses the tray and the cassette); no button press, 4 times. **Ink-sheet error** (`Unknown Error (0c)`, ink sheet torn): the printer needs a power cycle, after which it is *Idle* and **the held photo is lost**, so resending is correct. So a printer can be cleared without printing (power cycle). FR-7.7 and the Appendix B staff hints were revised accordingly in v0.20. Other errors (real jam, `Ink Cassette Empty (06)`): B-Q4.
 - A5 Only one job is ever inside the printer at a time, because the booth sends the next copy only after the previous one is `DONE` (FR-5.11). `[derived]`
 - A6 The fast-return behaviour read in the Gutenprint master source matches the installed 5.3.4. `[code]` confirmed in P-1 (§17.3.1): fast return on → backend exits when printing starts; `FAST_RETURN=0` → backend stays until "Print complete".
 - A7 Once `Printing YELLOW` has been reported for a copy, its ink panel set is used up even if the sheet is then lost; before it, no ink is used. (assumed — B-Q4) (P-1: the first rear pass comes ~3 s before `Printing YELLOW`.)
@@ -404,7 +404,7 @@ Decides whether the booth accepts a new print request. There is no print queue: 
 | FR-7.5 | Must | For a known CUPS error (Appendix B) the screen shall show its German cause. `[user]` | approved |
 | FR-7.13 | Must | For a known CUPS error the screen shall show the staff hint from Appendix B. `[user]` | approved |
 | FR-7.6 | Must | For an unrecognised CUPS error the screen shall show "Druckerproblem – bitte Personal rufen" large, and the exact CUPS message small underneath. `[user]` | approved |
-| FR-7.7 | Must | Staff hints for printer errors shall say: fix the printer, press the printer's own print button, then confirm on the phone. `[user]` A4 — to be revised: P-1 shows the printer resumes by itself after paper/ink errors and loses the photo after an ink-sheet error and power cycle (A4); proposed per-error hints in Appendix B | approved (under review) |
+| FR-7.7 | Must | Each printer error in Appendix B shall have its own staff hint, telling the operator how to fix that error and to confirm on the phone whether the photo came out; for errors after which the printer prints the held photo by itself (A4), the hint says so and names the print button only as a fallback. `[user]` A4 (v0.19, replaces the single "press the print button" rule) | approved |
 | FR-7.10 | Must | With N > 1 copies the screen shall show "Kopie k von N". `[derived]` FR-5.11 | approved |
 | FR-7.12 | Should | After a page reload during a print, the print screen shall show the request's current stage again. | proposed (OD4) |
 | FR-7.9 | Should | Exact German wording per Appendix B. | proposed |
@@ -422,7 +422,7 @@ Decides whether the booth accepts a new print request. There is no print queue: 
 | FR-7.4 | `LAYER_4` | "Schutzschicht" | "Schwarz", "K", "Laminate" | unit |
 | FR-7.5 | CUPS reason `Ink Cassette Empty (06)` | "Farbkassette leer" | raw message only | unit |
 | FR-7.6 | CUPS reason `Unknown Error (08)` | generic text + "Unknown Error (08)" | blank or only "Fehler" | unit |
-| FR-7.7 | Any Appendix B printer error | hint mentions confirming on the phone | "Nicht die Taste am Drucker drücken" | unit |
+| FR-7.7 | Each Appendix B printer error | its own hint as in Appendix B, ending with confirming on the phone | the same generic hint for every error; "Drucktaste" as the first step for paper/ink errors | unit |
 | FR-7.10 | 3 copies, copy 2 printing | "Kopie 2 von 3" | missing or wrong count | unit |
 
 ## 8. Supply Counters (Phase 2)
@@ -861,19 +861,19 @@ Removed in v0.16 with the ESP32 unit: `T_sent_to_pass1`, `T_pass`, `T_eject` (re
 | copies (N > 1) | Kopie k von N |
 | busy rejection (OD5) | Drucker beschäftigt – bitte warten, bis der aktuelle Druck fertig ist |
 
-**Printer errors (from CUPS)** — staff hint for all: fix the problem, press the printer's print button, then confirm on the phone (FR-7.7). *Under review:* in P-1 the printer printed the held photo by itself after paper and ink errors, without the button (A4); "Drucktaste am Drucker drücken" is wrong there. **Proposed revision (P-1):** paper/ink errors → "Ursache beheben – der Drucker druckt das Foto danach selbst. Dann am Handy *Foto ist da* bestätigen."; ink-sheet error `0c` → see its row. Rows below keep the old hint until FR-7.7 is re-decided.
+**Printer errors (from CUPS)** — one staff hint per error (FR-7.7) `[user]` v0.19. Basis: P-1 (A4) — after paper and ink errors the printer prints the held photo by itself once the cause is fixed; after an ink-sheet error it needs a power cycle and the photo is lost. Hints marked *to be checked* are for errors not yet seen on the real printer and are corrected when first seen (B-1 or an event).
 
 | Trigger | Guest text | Staff hint |
 |---|---|---|
-| `Paper Feed (02)`, paper left 0 (FR-8.6) | Papier leer | Papier auffüllen, Anzahl am Handy eingeben, Drucktaste am Drucker drücken, dann am Handy bestätigen. |
-| `Paper Feed (02)`, paper left > 0 | Papiereinzug gestört | Papier prüfen und neu einlegen, Drucktaste am Drucker drücken, dann am Handy bestätigen. |
-| `Paper Feed (02)`, count unknown `[code]` | Papier leer oder Papiereinzug gestört | Papier prüfen/auffüllen, Drucktaste am Drucker drücken, dann am Handy bestätigen. |
-| `Ink Cassette Empty (06)` `[code]` | Farbkassette leer | Farbkassette tauschen, Drucktaste am Drucker drücken, dann am Handy bestätigen. |
-| `No Paper (03)` `[code]` P-1: paper tray removed | Papierkassette fehlt | Papierkassette einsetzen, dann am Handy bestätigen. *(proposed; hint per A4)* |
-| `No Ink (07)` `[code]` P-1: ink cassette removed | Farbkassette fehlt | Farbkassette einsetzen, dann am Handy bestätigen. *(proposed; hint per A4)* |
-| `Unknown Error (0c)` `[code]` P-1: ink sheet torn / slack | Problem mit der Farbkassette | Drucker ausschalten und wieder einschalten, Farbkassette entnehmen, Farbfolie straffen oder Kassette tauschen. Das Foto ist danach verloren: am Handy *Foto fehlt* bestätigen. *(proposed)* |
-| `No Paper and Ink (09)` `[code]` | Papier- oder Farbkassette fehlt | Beide Kassetten prüfen, Drucktaste am Drucker drücken, dann am Handy bestätigen. |
-| `Paper jam (0b)` `[code]` | Papierstau | Papier vorsichtig entfernen, Drucktaste am Drucker drücken, dann am Handy bestätigen. |
+| `Paper Feed (02)`, paper left 0 (FR-8.6) | Papier leer | Papier auffüllen und Anzahl am Handy eingeben – der Drucker druckt das Foto danach selbst. Druckt er nicht innerhalb einer Minute von selbst: Drucktaste am Drucker drücken. Dann am Handy bestätigen, ob das Foto da ist. |
+| `Paper Feed (02)`, paper left > 0 | Papiereinzug gestört | Papier prüfen und neu einlegen, Anzahl am Handy eingeben – der Drucker druckt das Foto danach selbst. Druckt er nicht innerhalb einer Minute von selbst: Drucktaste am Drucker drücken. Dann am Handy bestätigen, ob das Foto da ist. |
+| `Paper Feed (02)`, count unknown `[code]` | Papier leer oder Papiereinzug gestört | Papier prüfen oder auffüllen, Anzahl am Handy eingeben – der Drucker druckt das Foto danach selbst. Druckt er nicht innerhalb einer Minute von selbst: Drucktaste am Drucker drücken. Dann am Handy bestätigen, ob das Foto da ist. |
+| `No Paper (03)` `[code]` P-1: paper tray removed | Papierkassette fehlt | Papierkassette einsetzen – der Drucker druckt das Foto danach selbst. Druckt er nicht innerhalb einer Minute von selbst: Drucktaste am Drucker drücken. Dann am Handy bestätigen, ob das Foto da ist. |
+| `No Ink (07)` `[code]` P-1: ink cassette removed | Farbkassette fehlt | Farbkassette einsetzen – der Drucker druckt das Foto danach selbst. Druckt er nicht innerhalb einer Minute von selbst: Drucktaste am Drucker drücken. Dann am Handy bestätigen, ob das Foto da ist. |
+| `No Paper and Ink (09)` `[code]` | Papier- oder Farbkassette fehlt | Beide Kassetten prüfen und einsetzen – der Drucker druckt das Foto danach selbst. Druckt er nicht innerhalb einer Minute von selbst: Drucktaste am Drucker drücken. Dann am Handy bestätigen, ob das Foto da ist. |
+| `Ink Cassette Empty (06)` `[code]` | Farbkassette leer | Farbkassette tauschen – der Drucker druckt das Foto danach meist selbst. Dann am Handy bestätigen, ob das Foto da ist. *(to be checked)* |
+| `Unknown Error (0c)` `[code]` P-1: ink sheet torn / slack | Problem mit der Farbkassette | Drucker ausschalten und wieder einschalten, Farbkassette entnehmen, Farbfolie straffen oder Kassette tauschen. Das Foto ist danach verloren: am Handy *Foto fehlt* bestätigen. |
+| `Paper jam (0b)` `[code]` | Papierstau | Den Anweisungen am Druckerdisplay folgen (Drucker aus- und wieder einschalten). Dann am Handy bestätigen, ob das Foto da ist. *(to be checked; the printer display asks for a power cycle `[user]`, after which the held photo is probably lost, A4)* |
 | printer not connected / not found (assumed) | Drucker nicht verbunden | USB-Kabel und Strom prüfen. |
 | any other, e.g. `Unknown Error (08)` `[code]` | Druckerproblem – bitte Personal rufen | *(raw CUPS message)* |
 
@@ -910,7 +910,7 @@ The panel texts (old Appendix C, first table) were removed with the panel in v0.
 
 ```yaml
 document_status: draft
-fsd_version: 0.19
+fsd_version: 0.20
 repository: starkerflamingo32/photobooth (branch booth)
 baseline_commit: e8c2cbd3
 applicable_firmware_version: n/a (no ESP32 unit since v0.16)
@@ -987,7 +987,12 @@ change_history:
       decides everything else; automatic decisions logged and shown on the phone with their reason
   - 2026-11-27 v0.19: OD13 made a planned decision point (does not block "defined"); review block 1 — FR-5.2,
       5.3, 5.4, 5.6, 5.14, FR-9.7…9.10 approved; FEEDING stage ("Papier wird eingezogen") added to FR-5.2
+  - 2026-11-27 v0.20: review block 2 — FR-7.7 per-error staff hints approved; Appendix B hints rewritten: paper/ink
+      errors "printer prints by itself" with the print button as fallback after a minute; 06 and 0b to be checked;
+      0b follows the printer display (power cycle), no "remove paper" step
 superseded_requirements:
+  # v0.20
+  - FR-7.7 v0.16 (one rule: press the print button, confirm on the phone) — per-error hints (FR-7.7 v0.20)
   # v0.17
   - FR-7.20 v0.16 (remind the guest to take an earlier photo before a new request) — not needed, photo on the tray does no harm
   - FR-7.19 v0.16 (mechanism open) — fixed time T_take_hint
