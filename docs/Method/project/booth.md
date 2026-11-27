@@ -45,7 +45,7 @@ The integration and e2e suites run against the virtual test setup
 
 - **Commit messages**: imperative summary line; FSD changes start with `FSD v<version>: <what changed>` and bump
   `fsd_version` in Appendix D with one `change_history` line.
-- **Language** *(proposed, awaiting the booth owner)*: code, comments, commits and the three planes in English; guest and operator texts in German, worded
+- **Language** `[user]`: code, comments, commits and the three planes in English; guest and operator texts in German, worded
   exactly as in FSD Appendices B and C.
 
 ## Credentials
