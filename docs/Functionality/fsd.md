@@ -404,7 +404,7 @@ Decides whether the booth accepts a new print request. There is no print queue: 
 |---|---|---|---|
 | FR-7.1 | Must | After the guest presses Drucken, the print screen shall show the current stage of that request until the last copy is `DONE` or `CANCELLED`. `[user]` | approved |
 | FR-7.14 | Must | While a print request is unfinished, the print screen shall offer no way to leave it, including during `ERROR` and `AWAIT_OPERATOR`; no photo can be started until it closes. `[user]` (Staff opening the admin login on the laptop, FR-12b.20, is not a guest way out.) | approved |
-| FR-7.15 | Must | When the print screen closes after the last copy is `DONE`, the booth shall show the guest start screen immediately; the result view of that photo, with its print button, shall not be shown again. `[user]` | approved |
+| FR-7.15 | Must | When the print screen closes after the last copy is `DONE`, the booth shall show the guest start screen within {{T_ui}}; the result view of that photo, with its print button, shall not be shown again. `[user]` | approved |
 | FR-7.18 | Must | After the last copy of a request is `DONE` (single or multi-copy), the print screen shall show "Fertig – bitte Foto entnehmen" for {{T_take_hint}} and then close. `[user]` | approved |
 | FR-7.19 | Must | Between copies of a multi-copy request, the print screen shall show "Kopie k von N fertig – bitte Foto entnehmen" for {{T_take_hint}} and then send copy k+1, whether or not the photo has been taken. `[user]` A8 | approved |
 | FR-7.16 | Must | With `print.max_multi` > 1, the guest shall choose the number of copies in upstream's existing copies dialog (minus/plus, 1…`print.max_multi`, "Drucken" / "Abbrechen"; `assets/js/tools.js` `askCopies`). How the chosen number reaches the print stack is not yet decided. `print.max_multi` stays an admin-panel setting, unchanged. `[user]` | approved |
@@ -426,7 +426,7 @@ Decides whether the booth accepts a new print request. There is no print queue: 
 | FR-7.1 | Full print | every stage shown, closes after "Fertig" | screen closes before `DONE` | integration |
 | FR-7.21 | Press Drucken, image preparation delayed 3 s in simulation | "Druckauftrag gesendet" within {{T_ui}} of the press, unchanged until `SENT` | empty or start screen during preparation; stall raised before `SENT` | integration |
 | FR-7.14 | `ERROR` on copy 1 · tap everywhere on the screen, swipe, press keys | print screen stays; no photo starts | screen closes; start screen or photo countdown reachable | integration |
-| FR-7.15 | Full print · "Fertig" screen closes | start screen shown at once | result view of that photo shown; its print button pressable | integration |
+| FR-7.15 | Full print · "Fertig" screen closes | start screen shown within T_ui | result view of that photo shown; its print button pressable | integration |
 | FR-7.18 | Single print | "Fertig – bitte Foto entnehmen" for T_take_hint, then start screen | screen stays; closes early | e2e |
 | FR-7.19 | 2 copies · copy 1 `DONE`, photo not taken | "Kopie 1 von 2 fertig – bitte Foto entnehmen" for T_take_hint, then copy 2 sent | screen closes after copy 1; copy 2 waits for the photo to be taken | e2e |
 | FR-7.16 | `print.max_multi` = 3 · press Drucken, choose 2, confirm | 2 copies printed in sequence | more than 3 selectable; dialog skipped | integration |
@@ -533,7 +533,7 @@ Delivers, for the `selphy` queue: whether a job was accepted, each job's state (
 | FR-9.5 | Must | A printer error shall reach the tracker within {{T_cups_poll}}. | approved |
 | FR-9.6 | Must | Shall report a job left pending in a stopped queue as pending, so reconciliation (FR-6.4) can find it. `[code]` R3 | approved |
 | FR-9.10 | Must | Shall deliver the backend's printer-state messages for the active job (`Feeding Paper`, `Printing YELLOW/MAGENTA/CYAN/LAMINATE`, `Print complete`) to the tracker within {{T_cups_poll}}, tagged with the job ID they belong to; unknown messages are delivered as such and logged. `[user]` §2.3 | approved |
-| FR-9.7 | Must | While the queue is stopped and a copy is in `ERROR` or `AWAIT_OPERATOR`, shall query the printer's own status about every {{T_printer_poll}}; never while the queue is enabled, a CUPS backend is attached to the printer, or `cupsenable` runs. `[user]` R14 | approved |
+| FR-9.7 | Must | While the queue is stopped and a copy is in `ERROR` or `AWAIT_OPERATOR`, shall start the next printer status query {{T_printer_poll}} after the previous one ended (answered, failed or stopped, FR-9.9); never while the queue is enabled, a CUPS backend is attached to the printer, or `cupsenable` runs. `[user]` R14 | approved |
 | FR-9.8 | Must | From the printer status query, shall report only: *printing* (any `Feeding Paper` / `Printing …` state), *idle*, *error* (with text), *no answer*; and per held copy whether printing was seen and then *idle* followed (= *printed*), or *idle* followed without printing (= *nothing printed*). Layer names from the query shall not be used. `[derived]` R14 | approved |
 | FR-9.9 | Must | A query that hangs or fails (e.g. `libusb error -7`) shall be reported as *no answer*, never as a printer error; a query running longer than {{T_query_hang}} shall be stopped and retried. `[code]` R14 | approved |
 
@@ -547,7 +547,7 @@ Delivers, for the `selphy` queue: whether a job was accepted, each job's state (
 | FR-9.6 | Queue stopped, job pending | job reported pending | job missing | integration |
 | FR-9.10 | Simulated backend emits the P-1 job 119 message sequence | each message reaches the tracker with job ID within T_cups_poll | message lost; wrong job | integration |
 | FR-9.7 | Queue enabled, print running | no printer status query runs | query while the backend is attached | integration |
-| FR-9.7 | Queue stopped by an error | queries about every T_printer_poll; stop when the operator decides | no query; query after `cupsenable` | integration |
+| FR-9.7 | Queue stopped by an error | each query starts T_printer_poll ± 10 % after the previous one ended; queries stop when the operator decides | gap outside 0.9–1.1 s; no query; query after `cupsenable` | integration |
 | FR-9.8 | Simulated query: Feeding, Printing, Idle | *printed* reported | layer stage shown from the query | unit |
 | FR-9.8 | Simulated query: Idle only (power cycle) | *nothing printed* | *printed* | unit |
 | FR-9.9 | Simulated query hangs 17 s | *no answer*, retried after T_query_hang | printer error shown | unit |
@@ -911,7 +911,7 @@ How reliable the printer status query and auto-resume (FR-6.15) are gets checked
 | `T_layer4_to_complete` | max time from `Printing LAMINATE` to `Print complete` (stall limit) | **20 s** `[user]`. B-1: 12 s, P-1: 12 s |
 | `T_take_hint` | how long "Fertig – bitte Foto entnehmen" stays after the last copy, and "Kopie k von N fertig – bitte Foto entnehmen" between copies | **3 s** `[user]` |
 | `T_cups_poll` | max delay for a CUPS error or backend message to reach the tracker | **2 s** `[user]`. B-1 and P-1: messages and errors within ~1.5 s at a ~1.3 s poll |
-| `T_printer_poll` | interval of the printer status query while the queue is stopped | **1 s** `[user]` (as in P-1) |
+| `T_printer_poll` | pause from the end of one printer status query to the start of the next, while the queue is stopped | **1 s ± 10 %** `[user]` (as in P-1; tolerance v0.35) |
 | `T_query_hang` | a printer status query running longer than this is stopped and retried | **25 s** `[user]` (B-1 hangs 18.0–18.1 s, 3×; P-1 ~17 s) |
 | `T_prepare` | max time to prepare a copy's print image (§8b) before falling back (FR-8b.4) | **10 s** `[user]` (B-1: 2.6 s on the booth laptop) |
 | `T_ui` | max delay from event to screen (booth screen and operator web UI), and for print buttons to change state | **2 s** `[user]` |
@@ -995,7 +995,7 @@ The panel texts (old Appendix C, first table) were removed with the panel in v0.
 
 ```yaml
 document_status: draft
-fsd_version: 0.34
+fsd_version: 0.35
 repository: starkerflamingo32/photobooth (branch booth)
 baseline_commit: e8c2cbd3
 applicable_firmware_version: n/a (no ESP32 unit since v0.16)
@@ -1111,6 +1111,8 @@ change_history:
   - 2026-11-27 v0.34: three planes installed (docs/00-Overview.md, docs/Method/, docs/UserDocumentation/);
       §16 moved to the user manual, §17.0 'where tests live', §17.1, §17.1.1, §17.2 moved to
       Method/project/test-infrastructure.md, pointers left under the same numbers; phase 3 has no phase dependency
+  - 2026-11-27 v0.35: FR-7.15 start screen within T_ui [user]; FR-9.7 / T_printer_poll: 1 s ± 10 % from the end of
+      one query to the start of the next [user]
 superseded_requirements:
   # v0.30
   - FR-12b.22 v0.29 (prompt, apply-after-confirm and logging in one) — FR-12b.22, 12b.23, 12b.24
