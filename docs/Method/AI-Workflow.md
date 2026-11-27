@@ -16,7 +16,7 @@ refactors of upstream code.
 
 **3. Test: the gate, not an afterthought.** A change is **not done** until its test exists and passes. The
 requirement's verification contract in the FSD says what the test must observe and what must not happen; the test
-is declared in `testing/test-plan.yaml` (owned by `/build`) and written beside the code. A bug fix writes its
+is declared in `testing/test-plan.yaml` ([format](project/test-infrastructure.md#test-plan)) and written beside the code. A bug fix writes its
 **regression test first**, and that test fails before the fix and passes after.
 
 **4. Reconcile the documentation.**

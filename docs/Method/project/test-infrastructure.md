@@ -1,10 +1,42 @@
 # Photobooth Booth — Test infrastructure
 
-How the tests behind the FSD's verification contracts are run: where they live, the virtual test setup, the browser setup and the CI workflows. The tiers and what each covers are in the FSD ([§17.0](../../Functionality/fsd.md#170-test-architecture)); which test exists and what it produced is in `testing/test-plan.yaml` (owned by `/build`). Requirement IDs (FR-…, NFR-…) and R-numbers refer to the [FSD](../../Functionality/fsd.md).
+How the tests behind the FSD's verification contracts are run: where they live, the virtual test setup, the browser setup and the CI workflows. The tiers and what each covers are in the FSD ([§17.0](../../Functionality/fsd.md#170-test-architecture)); which test exists and what it produced is in `testing/test-plan.yaml` ([test plan](#test-plan)). Requirement IDs (FR-…, NFR-…) and R-numbers refer to the [FSD](../../Functionality/fsd.md).
 
 ## Where tests live
 
 all test code, scenarios, simulators and test workflows live in this fork (`starkerflamingo32/photobooth`, public), under `testing/` and `.github/workflows/`. `[user]` photobooth-setup (private) stays the deployment repo; the fork's CI checks it out read-only at a pinned commit to build the `cups` and `dummy-dslr` images, so the queue options under test are the deployed ones (NFR-13.1). `[derived]`
+
+## Where tests run
+
+The same test stack (one compose file in `testing/`) runs in two places. `[user]`
+
+| Where | Role |
+|---|---|
+| **Development VM, local Docker** | The development loop: build, run and debug single tests and scenarios without a push. photobooth-setup is used from its sibling clone (`../photobooth-setup`), so no token is needed. |
+| **GitHub Actions** | The gate: every push runs the suites on clean runners ([GitHub Actions plan](#github-actions-plan)). A change is done when CI is green, not when it passed locally. |
+
+- Local and CI use the same compose file and scenario files; nothing is set up differently for CI except where photobooth-setup comes from (sibling clone locally, pinned checkout in CI).
+- Local runs must fit the VM's memory: integration runs need the stack only; e2e runs with several browsers need more. If an e2e run fails locally for lack of memory, it is run in CI instead, never skipped.
+- Local evidence stays on the VM under `test-results/` (ignored by git); CI evidence is uploaded as workflow artifacts.
+
+## Test plan
+
+`testing/test-plan.yaml` lists every test. It is this project's own format; the Embedded-AI-Harness `/build` and `/harness` skills are not used, since they target an ESP32 workbench. `[user]`
+
+```yaml
+tests:
+  - id: T-5.2-a                      # T-<chapter>-<letter>, stable, never reused
+    verifies: [FR-5.2]               # requirement IDs; coverage is computed from these
+    tier: unit                       # unit | integration | e2e | bench (FSD §17.0)
+    file: testing/unit/tracker_stage_test.php
+    scenario: null                   # scenario file for integration/e2e
+    status: planned                  # planned | written | passing | failing | not-done
+    last_run: {date: null, commit: null, where: null, evidence: null}
+```
+
+- One entry per contract row in the FSD; a contract row with no entry is a gap.
+- `status` and `last_run` are updated from real runs only; a test is never marked `passing` without a run that produced evidence.
+- Coverage (requirements with no test, with failing tests, with tests not yet run) is generated from this file, never written by hand.
 
 ## Virtual test setup
 

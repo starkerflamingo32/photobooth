@@ -8,7 +8,7 @@
 |---|---|
 | Created | 2026-11-23 |
 | Last updated | 2026-11-27 |
-| Load defined | **Yes** (v0.36, 2026-11-27) — every Must/Should has a verification contract, every phase can be entered from the ones before it, the three planes exist and are committed, no `(assumed)` on anything architecture-critical. Gate run by hand (no `testing/gates/` checker yet). Known exception, deferred by the owner: dated P-1/B-1 results in §17.3.1–17.3.2 stay in the FSD until `/build` sets up `test-results/`. Approval (Appendix D `approval_status`) is the owner's sign-off. |
+| Load defined | **Yes** (v0.36, 2026-11-27) — every Must/Should has a verification contract, every phase can be entered from the ones before it, the three planes exist and are committed, no `(assumed)` on anything architecture-critical. Gate run by hand (no `testing/gates/` checker yet). Known exception, deferred by the owner: dated P-1/B-1 results in §17.3.1–17.3.2 stay in the FSD until evidence moves to `test-results/` (Method → test infrastructure). Approval (Appendix D `approval_status`) is the owner's sign-off. |
 
 Full lifecycle metadata: Appendix D.
 
@@ -762,7 +762,7 @@ How the booth is run at an event: [User Manual → At an event](../UserDocumenta
 | e2e | Virtual test setup (§17.1) with real browsers (Playwright) acting as guest, admin and operator, the way people use the booth at an event | §6–§7, §12b, §17.5, exactly-once contracts as seen on screen |
 | bench | Event laptop + real SELPHY | B-1 (§17.3), §5.4 contracts on hardware, Appendix A |
 
-Traceability is generated from the requirement IDs in this document and the test plan (`testing/test-plan.yaml`, owned by `/build`) — not maintained by hand here.
+Traceability is generated from the requirement IDs in this document and the test plan (`testing/test-plan.yaml`, [Method → test plan](../Method/project/test-infrastructure.md#test-plan)) — not maintained by hand here.
 
 **Where tests live:** [Method → test infrastructure](../Method/project/test-infrastructure.md#where-tests-live).
 
@@ -1066,7 +1066,7 @@ The panel texts (old Appendix C, first table) were removed with the panel in v0.
 
 ```yaml
 document_status: draft
-fsd_version: 0.36
+fsd_version: 0.37
 repository: starkerflamingo32/photobooth (branch booth)
 baseline_commit: e8c2cbd3
 applicable_firmware_version: n/a (no ESP32 unit since v0.16)
@@ -1191,6 +1191,7 @@ change_history:
       12b.7, 12b.15, 14.1; "shall" wording for FR-7.9, 12b.9, NFR-13.1, 15.4; state model: E15 "Behoben" column,
       "—" defined, auto-resume as a source of E10/E11; Phase 4 includes installing the stack on the laptop and
       depends on Phases 2 and 3; §17.4 items 10–13 for the bench-tier contracts
+  - 2026-11-27 v0.37: test plan pointer goes to the Method (own format; harness skills not used) [user]
 superseded_requirements:
   # v0.30
   - FR-12b.22 v0.29 (prompt, apply-after-confirm and logging in one) — FR-12b.22, 12b.23, 12b.24

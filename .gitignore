@@ -57,3 +57,4 @@ scripts/rembg_venv/
 /.venv
 /site
 /.envrc
+test-results/
