@@ -8,7 +8,7 @@
 |---|---|
 | Created | 2026-11-23 |
 | Last updated | 2026-11-27 |
-| Load defined | **No** — B-1 done 2026-11-27 (§17.3.2), Appendix A complete, all owner decisions made (R18 decided in v0.29). Still missing: Method/UserDocumentation planes; the full gate check of every Must/Should contract (`/define` §12.5). Not blocking: print-limit characterisation (§17.5) runs in Phase 1, since it needs the virtual test setup and FR-8.8 already states the requirement; auto-resume (FR-6.15) is checked at the first event (E-1, §17.6). |
+| Load defined | **No** — B-1 done 2026-11-27 (§17.3.2), Appendix A complete, all owner decisions made (R18 decided in v0.29). Still missing: Method/UserDocumentation planes (`/define --planes`); then a final run of the full gate (`/define` §12.5). Every Must/Should has a contract since v0.33. Not blocking: print-limit characterisation (§17.5) runs in Phase 1, since it needs the virtual test setup and FR-8.8 already states the requirement; auto-resume (FR-6.15) is checked at the first event (E-1, §17.6). |
 
 Full lifecycle metadata: Appendix D.
 
@@ -437,6 +437,12 @@ Decides whether the booth accepts a new print request. There is no print queue: 
 | FR-7.6 | CUPS reason `Unknown Error (08)` | generic text + "Unknown Error (08)" | blank or only "Fehler" | unit |
 | FR-7.7 | Each Appendix B printer error | its own hint as in Appendix B, ending with confirming on the phone | the same generic hint for every error; "Drucktaste" as the first step for paper/ink errors | unit |
 | FR-7.10 | 3 copies, copy 2 printing | "Kopie 2 von 3" | missing or wrong count | unit |
+| FR-7.2 | Print screen open, `LAYER_1` · simulated backend emits `Printing MAGENTA` | "Magenta wird gedruckt (2/4)" within T_ui of the message reaching the tracker, without a reload | previous stage still shown after T_ui; a stage skipped | integration |
+| FR-7.3 | Walk every print screen state (each Appendix B stage, error, information text and the busy rejection) · collect all visible text | every string is German (Appendix B); only the raw CUPS line of FR-7.6 may be English | English or untranslated upstream text anywhere else | e2e |
+| FR-7.9 | Each Appendix B row · render its state (k, N, n filled in) | text equals the Appendix B text character for character | changed, shortened or merged wording | unit |
+| FR-7.12 | 2 copies, copy 1 in `LAYER_3` · reload the page; separately, close and restart the browser | print screen back within T_ui of the page loading, showing "Cyan wird gedruckt (3/4)" and "Kopie 1 von 2" | start screen or result view shown; stage reset to `SENT`; copy sent again | e2e |
+| FR-7.12 | `ERROR` `No Paper (03)` · reload the page | guest text and staff hint shown again; still no way out (FR-7.14) | error lost; start screen reachable | e2e |
+| FR-7.13 | Each known error in Appendix B · show it on the print screen | its own staff hint from Appendix B shown with the guest text | guest text without hint; another error's hint | unit |
 
 ## 8. Supply Counters (Phase 2)
 
@@ -476,6 +482,7 @@ Tracks how much paper is left in the tray and how many prints are left on the in
 | FR-8.10 | Paper 10, prints 10, `Paper jam (0b)` in `LAYER_2` · operator "Foto fehlt", then "Blatt verbraucht?" → Ja | paper 9, prints 9 before the resent copy; 8/8 after it | question blocks the resend; counts lowered without "Ja" | e2e |
 | FR-8.10 | Paper 10, `Paper Feed (02)` in `SENT` (no layer reported) · "Foto fehlt" → Ja | paper 9, prints 10 | prints lowered | unit |
 | FR-8.10 | "Foto fehlt" → Nein, or no answer until the request is done | counts unchanged; question gone | counts lowered | e2e |
+| FR-8.9 | Paper 12, prints 40 · open the printer status page while idle, then during a print and in `ERROR` | both counts visible in every state without opening a menu, tab or dialog | counts hidden while idle; shown only after a print | integration |
 
 ## 8b. Print Image
 
@@ -570,8 +577,8 @@ Access reuses upstream's admin login `[user]`: the operator opens the login page
 | FR-12b.18 | Must | For each copy in `ERROR` or `AWAIT_OPERATOR`, only the first confirmed decision shall be applied, from whichever browser it came; a later decision for the same copy shall be ignored and logged, and every open printer status page shall show the decision that was applied. `[derived]` R12 (was FR-10.8) | approved |
 | FR-12b.6 | Must | Shall update within {{T_ui}} of a state change without a manual reload. | approved |
 | FR-12b.7 | Must | When the page loses its connection to the booth, it shall say so ("Keine Verbindung zur Booth") and offer no decisions until it is connected again and shows current data. | approved |
-| FR-12b.9 | Must | Texts German; layout made for phone width with touch targets large enough to use with one hand. `[user]` | approved |
-| FR-12b.10 | Should | Shall list the print requests of the current event: requested, printed and failed copies, and each operator decision (FR-14.2). | approved |
+| FR-12b.9 | Must | Texts German; layout for phone width (360 CSS px, no horizontal scrolling); every button, link and switch at least 48×48 CSS px. `[user]` (sizes v0.33) | approved |
+| FR-12b.10 | Should | Shall list the print requests since the booth service last started: requested, printed and failed copies, and each operator decision; older requests are found in the logs (FR-14.2). `[user]` (boundary v0.33) | approved |
 | FR-12b.11 | Must | Shall show the supply counts, let the operator set and correct them, and ask "Blatt verbraucht?" after "Foto fehlt" (FR-8.2, FR-8.3, FR-8.9, FR-8.10). `[user]` | approved |
 | FR-12b.12 | Must | Shall not offer actions beyond those in this section (no cancelling jobs, no re-enabling the queue directly, FR-6.11). `[derived]` R3 | approved |
 | FR-12b.20 | Must | The printer status page shall also be usable on the booth laptop itself, reached the same way as on the phone (admin login → menu → "Drucker"), with the same content, decisions and confirmation step; no hidden gesture or separate staff screen. `[user]` OD12 | approved |
@@ -602,6 +609,14 @@ Access reuses upstream's admin login `[user]`: the operator opens the login page
 | FR-12b.23 | Power-cycle prompt shown · operator confirms "aus- und eingeschaltet" | "Foto fehlt" applied, copy resent once | copy resent before the confirmation; resent twice | integration |
 | FR-12b.23 | Power-cycle prompt shown · operator closes it | copy stays in `ERROR`, nothing resent | copy resent; decision applied or logged | integration |
 | FR-12b.24 | Prompt confirmed | log entry for the decision carries the power-cycle confirmation, time and browser | decision logged without it | unit |
+| FR-12b.1 | Mobile browser (360×800 viewport) on the booth network, nothing installed · open `login/`, log in, menu → "Drucker" | printer status page shown | app, plugin or desktop browser needed | e2e |
+| FR-12b.1 | Real booth, operator phone on the booth Wi-Fi · type the address from the label inside the booth | upstream login page loads | label missing or its address wrong | bench |
+| FR-12b.9 | 360×800 viewport · every printer status page state (idle, printing, `ERROR` with decisions, confirmation, power-cycle prompt, "Blatt verbraucht?", counter entry) | all text German (Appendix C; raw CUPS message excepted); page width ≤ 360 px; every button, link and switch ≥ 48×48 CSS px | English text; horizontal scrolling; a target under 48 px in either dimension | e2e |
+| FR-12b.10 | Booth started · request 1 printed; request 2 with 2 copies, copy 1 `Paper Feed (02)` → "Foto fehlt" → resent → both `DONE` | list: request 1 1 requested / 1 printed; request 2 2 requested / 2 printed / 1 failed, decision "Foto fehlt" with time | request missing; failed copy counted as printed; decision missing | integration |
+| FR-12b.10 | After that scenario · restart the booth service | list empty; both requests still in the logs | requests from before the restart listed; logs lost | integration |
+| FR-12b.11 | Printer status page, idle · set paper 18 and prints 50, then correct paper to 17; then `ERROR` → "Foto fehlt" confirmed | page shows 17 / 50; "Blatt verbraucht?" shown on the same page | counts only settable outside this page; question missing | e2e |
+| FR-12b.15 | Printer status page open · tap the menu link | `login/menu.php` opens, session still valid | no link; link logs out or opens the login page | integration |
+| FR-12b.19 | `SetEnv FAST_RETURN 0` removed · start booth, open printer status page; then restore it, restart | warning text from Appendix C shown; after the restore no warning | warning missing; warning shown while the line is set | integration |
 
 ---
 
@@ -620,8 +635,11 @@ Configured, not owned: the `selphy` queue (photobooth-setup `native/setup-printe
 
 | ID | Precondition · stimulus | Expected observation | Must NOT happen | Tier |
 |---|---|---|---|---|
+| NFR-13.2 | Booth after a photobooth-setup run · read `/etc/cups/cups-files.conf`; during a simulated print read the backend process's environment | `SetEnv FAST_RETURN 0` present (not only in `cupsd.conf`); backend runs with `FAST_RETURN=0` | line missing or only in `cupsd.conf`; backend without it | integration |
+| NFR-13.2 | Real SELPHY · one print | backend attached until `Print complete`; CUPS *completed* 1–3 s after the eject (Appendix A `T_cups_completed`) | job *completed* before `Printing LAMINATE` | bench |
 | NFR-13.3 | Print running · switch the router off | print completes, print screen shows every stage | print or tracker stops | bench |
 | NFR-13.4 | `SetEnv` line removed · start booth | warning logged and shown on the phone | silent start | integration |
+| NFR-13.1 | CI, photobooth-setup via the read-only token (R13) · set up the queue with `cups/entrypoint.sh` in its container and with `native/setup-printer.sh` on the runner; dump `lpoptions -p selphy -l` and the queue's `lpstat -l -p selphy` options from each | identical option sets and values | an option set by one script only, or with a different value | integration |
 
 ---
 
@@ -634,16 +652,30 @@ Configured, not owned: the `selphy` queue (photobooth-setup `native/setup-printe
 | FR-14.1 | Must | Every stage change, backend message, error, printer status query result and operator decision shall be logged with timestamp, job ID, copy k of N and source (CUPS/backend/printer query/operator/timeout); ignored decisions (FR-12b.17, FR-12b.18) included. | approved |
 | FR-14.2 | Should | Logs shall let staff reconstruct after an event how many copies were requested, printed, and failed. `[derived]` event findings | approved |
 
+| ID | Precondition · stimulus | Expected observation | Must NOT happen | Tier |
+|---|---|---|---|---|
+| FR-14.1 | 2 copies · copy 1 `Paper Feed (02)`, printer query results, "Foto fehlt" from phone A, a second decision from phone B 1 s later, copy 2 printed | one entry per stage change, backend message, error, query result and decision, each with timestamp, job ID, copy k/N and source; phone B's decision logged as ignored | an event without an entry; an entry missing a field; wrong source; ignored decision not logged | integration |
+| FR-14.2 | That scenario plus one clean single print, then restart the booth · count from the log files alone | 3 copies requested, 3 printed, 1 failed | counts differ from what happened; anything besides the logs needed | integration |
+
 ## 15. Security
 
 Threat model: physical booth at a private event; the operator web UI on the booth Wi-Fi, which only the laptop and the operator phone join `[user]`; a root-run printer status query on the laptop. Accepted risk: someone with physical access can operate the printer and the laptop. `[user]`
 
 | ID | Pri | Requirement | Status |
 |---|---|---|---|
-| NFR-15.1 | Must | The booth Wi-Fi shall be WPA2 (or better) with a password known only to staff; guests are never given it. `[user]` | approved |
+| NFR-15.1 | Must | The booth Wi-Fi shall use WPA2 or WPA3, and its password shall appear on no guest-visible screen, QR code, gallery page or label. `[user]` (narrowed v0.33; who may know the password is an operating rule for the user manual) | approved |
 | NFR-15.2 | Must | The operator web UI shall require the upstream admin login (FR-12b.2), also from the booth Wi-Fi; at events `login.enabled` and admin protection (`protect.admin`) shall be on. A localhost exception for the booth laptop itself (`protect.localhost_admin` off) is allowed, as for the admin panel. `[derived]` R11 | approved |
 | NFR-15.3 | Must | The operator web UI shall not be reachable from the internet (no port forwarding, not exposed through the public photo/QR host). `[derived]` | approved |
 | NFR-15.4 | Must | The few commands the print stack needs as root (the printer status query) may run as root without a password, each as a fixed command line with no arguments taken from the web side, all listed in one dedicated sudoers drop-in file (`NOPASSWD`) that photobooth-setup installs; no other root permission is granted to the web server user. `[user]` R14 | approved |
+
+| ID | Precondition · stimulus | Expected observation | Must NOT happen | Tier |
+|---|---|---|---|---|
+| NFR-15.1 | Real booth router · scan the booth Wi-Fi from a phone and read the router's security setting | WPA2 or WPA3 | open, WEP or WPA1 | bench |
+| NFR-15.1 | Real booth · walk every guest page (start, result, gallery, QR) and decode every QR code shown; check the booth labels | booth Wi-Fi password found nowhere; no `WIFI:` QR for the booth network | password shown, encoded or printed for guests | bench |
+| NFR-15.2 | Booth configured for an event · read the config | `login.enabled` and `protect.admin` both on | either off | integration |
+| NFR-15.2 | Second host on the booth network (not localhost), no session · open the printer status page and POST a decision | login page; decision refused | status shown; decision applied | integration |
+| NFR-15.3 | Real booth at the event site · from a device off the booth network (mobile data), request the printer status page and decision endpoint via the public photo/QR host and the router's WAN address | no response or 404; no printer data | page or decision endpoint reachable | bench |
+| NFR-15.4 | Booth after a photobooth-setup run · `sudo -l -U <web server user>`; list `/etc/sudoers.d/` | only the fixed printer-query command line(s), `NOPASSWD`, all from the one drop-in file | any other root command; wildcards or arguments; a rule outside the drop-in | integration |
 
 ---
 
@@ -997,7 +1029,7 @@ The panel texts (old Appendix C, first table) were removed with the panel in v0.
 
 ```yaml
 document_status: draft
-fsd_version: 0.32
+fsd_version: 0.33
 repository: starkerflamingo32/photobooth (branch booth)
 baseline_commit: e8c2cbd3
 applicable_firmware_version: n/a (no ESP32 unit since v0.16)
@@ -1106,6 +1138,10 @@ change_history:
       present-state; §17.0 unit tier lists §8b
   - 2026-11-27 v0.31: T_prepare 10 s approved [user]
   - 2026-11-27 v0.32: Appendix C power-cycle text approved [user]; nothing proposed left
+  - 2026-11-27 v0.33: contracts for the 20 Must/Should without one (NFR-13.2, FR-7.2, 7.3, 7.9, 7.12, 7.13, 8.9, 12b.1, 12b.9,
+      12b.10, 12b.11, 12b.15, 12b.19, 14.1, 14.2, NFR-13.1, 15.1–15.4); FR-12b.9 touch targets ≥ 48×48 CSS px at 360 px
+      width [user]; FR-12b.10 list covers requests since booth service start [user]; NFR-15.1 narrowed to WPA2/WPA3 and
+      no guest exposure of the password, staff-only knowledge moved to the user manual [user]
 superseded_requirements:
   # v0.30
   - FR-12b.22 v0.29 (prompt, apply-after-confirm and logging in one) — FR-12b.22, 12b.23, 12b.24
