@@ -148,7 +148,7 @@ Dependencies point downward only. §10–§12 (unit interface, ESP32 sensor unit
 |---|---|---|---|
 | **1 — Virtual test setup** | §17.1: simulated SELPHY backend that emits the backend's stage messages, can inject SELPHY errors and pending/stopped-queue states, and answers printer status queries; browser test setup (§17.1.1); workflows (§17.2) | Every unit, integration and e2e test in this FSD can be run without hardware, in GitHub Actions; §17.5 run against upstream | — |
 | **2 — Booth logic + operator web UI + supply counters** | §5, §6, §7, §8, §8b, §9, §12b against the virtual test setup | All unit and integration tests pass; exactly-once contracts (§5.4) pass in simulation, with decisions made on the web UI | Phase 1 |
-| **3 — Bench session** | Bench session B-1 (§17.3) on the real SELPHY; **done 2026-11-27**, ahead of Phase 1 (§17.3.2) `[user]` | B-1 run; B-Q1…B-Q5 answered (B-Q6 if seen); Appendix A filled | Phase 2 |
+| **3 — Bench session** | Bench session B-1 (§17.3) on the real SELPHY; **done 2026-11-27**, ahead of Phase 1 (§17.3.2) `[user]` | B-1 run; B-Q1…B-Q5 answered (B-Q6 if seen); Appendix A filled | — (B-1 needed only the real printer and the bench scripts; it was run before Phase 1 `[user]`. Its results feed Phase 2 as fixtures and limits.) |
 | **4 — Acceptance** | §17.4 on the real booth | Acceptance list passes | Phase 3 |
 | **5 — First event** | Event observation E-1 (§17.6): printer query logged next to every operator decision | E-Q1 answered; auto-resume default confirmed or changed | Phase 4 |
 
