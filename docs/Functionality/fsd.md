@@ -146,7 +146,7 @@ Dependencies point downward only. §10–§12 (unit interface, ESP32 sensor unit
 
 | Phase | Scope | Exit criteria | Depends on |
 |---|---|---|---|
-| **1 — Virtual test setup** | §17.1: simulated SELPHY backend that emits the backend's stage messages, can inject SELPHY errors and pending/stopped-queue states, and answers printer status queries; browser test setup (§17.1.1); workflows (§17.2) | Every unit, integration and e2e test in this FSD can be run without hardware, in GitHub Actions; §17.5 run against upstream | — |
+| **1 — Virtual test setup** | §17.1: simulated SELPHY backend that emits the backend's stage messages, can inject SELPHY errors and pending/stopped-queue states, and answers printer status queries; browser test setup (§17.1.1); workflows (§17.2). **In progress** (2026-11-27): setup built and its own checks pass locally (T-17.1-*); not yet run in GitHub Actions (needs the `SETUP_REPO_TOKEN` secret, R13); §17.5 run locally on `booth` only (§17.5.1) | Every unit, integration and e2e test in this FSD can be run without hardware, in GitHub Actions; §17.5 run against upstream | — |
 | **2 — Booth logic + operator web UI + supply counters** | §5, §6, §7, §8, §8b, §9, §12b against the virtual test setup | All unit and integration tests pass; exactly-once contracts (§5.4) pass in simulation, with decisions made on the web UI | Phase 1 |
 | **3 — Bench session** | Bench session B-1 (§17.3) on the real SELPHY; **done 2026-11-27**, ahead of Phase 1 (§17.3.2) `[user]` | B-1 run; B-Q1…B-Q5 answered (B-Q6 if seen); Appendix A filled | — (B-1 needed only the real printer and the bench scripts; it was run before Phase 1 `[user]`. Its results feed Phase 2 as fixtures and limits.) |
 | **4 — Acceptance** | Booth stack from branch `booth` installed on the event laptop through photobooth-setup's native install; §17.4 on the real booth | Acceptance list passes, including the bench-tier contracts (§17.4 items 10–13) | Phases 2, 3 |
@@ -958,6 +958,25 @@ Logs on the laptop: `~/b1-*-20261127-*` (printer serial redacted in the copied `
 
 **Exit:** L-Q1…L-Q4 answered; results recorded in Appendix D (`related_test_baseline`). If L-Q1 shows the failure still on 49b09a94, the owner decides whether to report it upstream. L-Q2 must confirm the limit is inert before the next event (else FR-8.8 needs more than `print.limit` = 0). L-Q3 is input for whether auto-print is ever used.
 
+#### 17.5.1 Preliminary runs V-1 — 2026-11-27
+
+First runs of S1–S5 in the virtual test setup on the development VM, against `booth` at f3ec6ed6 (upstream code as of 49b09a94; the fork differs only in docs and `testing/`). The formal runs against 49b09a94 and `76d76e36^` (`upstream-characterisation.yml`) are still open, so L-Q1 is not answered for `76d76e36^` yet. Single local runs; their Playwright reports were not kept. `[code]`
+
+| Scenario | Observed |
+|---|---|
+| S1 | Limit 18: prints 1–18 accepted, print 19 refused with "Print locked."; the booth's unlock button is shown on the start screen; after pressing it, 3 more prints are accepted. The simulated printer received 21 jobs. |
+| S2 | Limit 18, 18 prints; admin reset **without** "print database": prints still refused ("Print locked."); reset **with** it: prints accepted. |
+| S3 | Limit 0: 20 paced prints all accepted. A `print.lock` made with limit 1, then limit set back to 0: every print refused with "Print locked." |
+| S4 | Auto-print, delay 2 s. Page reloaded 0.8 s into the delay: nothing printed (the reload returns to the start screen). With the queue stopped by a paper error, a second auto-print still submits a job (2 jobs pending in CUPS). While a print runs, a second auto-print submits a second job. |
+| S5 | Gallery reprints as fast as the viewer allows (it ignores the print button while the print overlay, `print.time` 5 s, is up): 13 in 74 s, none refused; the 10-per-60-s rate limit is not reached this way. With `print.max_multi` 3, a 3-copy request is refused with "General error. Check printer status or file path.": `api/print.php` passes the copy count as the first `sprintf` argument when `max_multi` > 1, so the default command `lp -o landscape -o fit-to-page %s` is run as `lp -o landscape -o fit-to-page 1` (booth log). |
+
+**Preliminary answers:**
+
+- **L-Q1:** on the 49b09a94 code, unlocking after the 18th print allows further prints; an admin reset clears the block only with "print database" ticked. The `76d76e36^` run (event failure) is open.
+- **L-Q2:** with `print.limit` = 0 no print is refused by limit code in 20 prints, but a leftover `print.lock` blocks every print. photobooth-setup's `apply-config.php` deletes the lock on each start; this is required, not just tidy (FR-8.8).
+- **L-Q3:** auto-print ignores a stopped queue and a running print: each photo submits a job. A reload during the delay prints nothing.
+- **L-Q4:** through the UI, the per-session rate limit does not refuse reprints at the default `print.time`; whether the guest would see the English text was not reached. Upstream's copies path with the default print command fails outright (relevant to FR-7.16, whose backend path is open).
+
 ### 17.6 Event observation E-1 — auto-resume at a real event
 
 How reliable the printer status query and auto-resume (FR-6.15) are gets checked at a real event, not on the bench: errors there are real (jams, empty trays at random points), and there are more of them than B-1 can provoke without wasting paper. `[user]`
@@ -1066,7 +1085,7 @@ The panel texts (old Appendix C, first table) were removed with the panel in v0.
 
 ```yaml
 document_status: draft
-fsd_version: 0.37
+fsd_version: 0.38
 repository: starkerflamingo32/photobooth (branch booth)
 baseline_commit: e8c2cbd3
 applicable_firmware_version: n/a (no ESP32 unit since v0.16)
@@ -1192,6 +1211,7 @@ change_history:
       "—" defined, auto-resume as a source of E10/E11; Phase 4 includes installing the stack on the laptop and
       depends on Phases 2 and 3; §17.4 items 10–13 for the bench-tier contracts
   - 2026-11-27 v0.37: test plan pointer goes to the Method (own format; harness skills not used) [user]
+  - 2026-11-27 v0.38: Phase 1 status; §17.5.1 preliminary characterisation runs V-1 on booth (L-Q2…L-Q4 preliminary, L-Q1 for 76d76e36^ open)
 superseded_requirements:
   # v0.30
   - FR-12b.22 v0.29 (prompt, apply-after-confirm and logging in one) — FR-12b.22, 12b.23, 12b.24
@@ -1254,7 +1274,7 @@ superseded_requirements:
   - NFR-12.2 (some mechanism re-enables the queue) — booth reconciliation (FR-6.4, FR-6.11)
   - FR-13.x → FR-14.x (renumbered with the new §12)
 open_decisions: none open
-related_test_baseline: P-1 2026-11-26 (pre-bench, §17.3.1); B-1 2026-11-27 (jobs 125–129, §17.3.2); E-1 and §17.5 not run
+related_test_baseline: P-1 2026-11-26 (pre-bench, §17.3.1); B-1 2026-11-27 (jobs 125–129, §17.3.2); V-1 2026-11-27 (§17.5 on booth f3ec6ed6, local, preliminary, §17.5.1); §17.5 on upstream refs and E-1 not run
 ```
 
 ## Related
