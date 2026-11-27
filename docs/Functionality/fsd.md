@@ -8,7 +8,7 @@
 |---|---|
 | Created | 2026-11-23 |
 | Last updated | 2026-11-27 |
-| Load defined | **No** — B-1 done 2026-11-27 (§17.3.2), Appendix A complete, all owner decisions made (R18 decided in v0.29). Still missing: the wording of one new operator text (Appendix C, `proposed`); Method/UserDocumentation planes; the full gate check of every Must/Should contract (`/define` §12.5). Not blocking: print-limit characterisation (§17.5) runs in Phase 1, since it needs the virtual test setup and FR-8.8 already states the requirement; auto-resume (FR-6.15) is checked at the first event (E-1, §17.6). |
+| Load defined | **No** — B-1 done 2026-11-27 (§17.3.2), Appendix A complete, all owner decisions made (R18 decided in v0.29). Still missing: approval of two proposed items (Appendix C text for FR-12b.22, `T_prepare` 10 s); Method/UserDocumentation planes; the full gate check of every Must/Should contract (`/define` §12.5). Not blocking: print-limit characterisation (§17.5) runs in Phase 1, since it needs the virtual test setup and FR-8.8 already states the requirement; auto-resume (FR-6.15) is checked at the first event (E-1, §17.6). |
 
 Full lifecycle metadata: Appendix D.
 
@@ -409,6 +409,7 @@ Decides whether the booth accepts a new print request. There is no print queue: 
 | FR-7.19 | Must | Between copies of a multi-copy request, the print screen shall show "Kopie k von N fertig – bitte Foto entnehmen" for {{T_take_hint}} and then send copy k+1, whether or not the photo has been taken. `[user]` A8 | approved |
 | FR-7.16 | Must | With `print.max_multi` > 1, the guest shall choose the number of copies in upstream's existing copies dialog (minus/plus, 1…`print.max_multi`, "Drucken" / "Abbrechen"; `assets/js/tools.js` `askCopies`). How the chosen number reaches the print stack is not yet decided. `print.max_multi` stays an admin-panel setting, unchanged. `[user]` | approved |
 | FR-7.17 | Must | Printing a photo again from the gallery shall stay possible, subject to the Busy Gate (§6); staff use it for reprints and can hide the gallery button in the admin panel. `[user]` | approved |
+| FR-7.21 | Must | From the press of Drucken (or the start of copy k+1, FR-7.19) until the copy's job is accepted by CUPS (`SENT`), the print screen shall show the `SENT` text "Druckauftrag gesendet (Kopie k von N)"; the image preparation (§8b) in that time is not a tracker state and no stall limit runs before `SENT`. `[user]` | approved |
 | FR-7.2 | Must | Stage changes shall appear on screen within {{T_ui}} of the event reaching the booth. | approved |
 | FR-7.3 | Must | All texts shall be German. `[user]` | approved |
 | FR-7.4 | Must | Layer stages shall be named yellow, magenta, cyan and **Schutzschicht** (clear coat; backend `LAMINATE`); the 4th stage shall never be called black/"Schwarz"/"K". `[user]` | approved |
@@ -423,6 +424,7 @@ Decides whether the booth accepts a new print request. There is no print queue: 
 | ID | Precondition · stimulus | Expected observation | Must NOT happen | Tier |
 |---|---|---|---|---|
 | FR-7.1 | Full print | every stage shown, closes after "Fertig" | screen closes before `DONE` | integration |
+| FR-7.21 | Press Drucken, image preparation delayed 3 s in simulation | "Druckauftrag gesendet" within {{T_ui}} of the press, unchanged until `SENT` | empty or start screen during preparation; stall raised before `SENT` | integration |
 | FR-7.14 | `ERROR` on copy 1 · tap everywhere on the screen, swipe, press keys | print screen stays; no photo starts | screen closes; start screen or photo countdown reachable | integration |
 | FR-7.15 | Full print · "Fertig" screen closes | start screen shown at once | result view of that photo shown; its print button pressable | integration |
 | FR-7.18 | Single print | "Fertig – bitte Foto entnehmen" for T_take_hint, then start screen | screen stays; closes early | e2e |
@@ -479,7 +481,7 @@ Tracks how much paper is left in the tray and how many prints are left on the in
 
 ### 8b.1 Purpose
 
-Prepares the image of each copy for the printer, so that CUPS does not scale it. Before v0.28 the booth sent the camera JPEG (e.g. 4509 × 3052) with `fit-to-page`, and CUPS' `imagetoraster` shrank it ~2.4× with plain interpolation and no anti-alias filter. B-1 (§17.3.2) printed the same photo prepared as below "way better" than earlier prints. `[user]`
+Prepares the image of each copy for the printer, so that CUPS does not scale it. Given a camera JPEG (e.g. 4509 × 3052) with `fit-to-page`, CUPS' `imagetoraster` shrinks it ~2.4× with plain interpolation and no anti-alias filter, which aliases fine detail; a photo prepared as below prints visibly better (B-1, §17.3.2). `[user]` The job options that make CUPS place the image 1:1 (`ppi=300`, no `fit-to-page` or `landscape`) are the means, not the requirement; FR-8b.1 states the observable result.
 
 Target from the `selphy` PPD `[code]`: Postcard 299.52 × 449.28 pt, 300 dpi, borderless → 1248 × 1872 px; `imagetoraster` rounds the page to 449 pt and builds a **1248 × 1871** raster, and passes an image of exactly that size at `ppi=300` through bit for bit (1872 rows are resampled again). Borderless: the paper (100 × 148 mm ≈ 1181 × 1748 px) is smaller than the raster, so ~30 px per edge are printed past the paper edge and not seen.
 
@@ -489,15 +491,17 @@ Reference implementation: `testing/bench/prescale-for-selphy.py` (B-1). Preparin
 
 | ID | Pri | Requirement | Status |
 |---|---|---|---|
-| FR-8b.1 | Must | Each copy shall be sent to CUPS as a lossless image of exactly 1248 × 1871 px at 300 dpi, with `ppi=300` and without `fit-to-page`, `landscape` or other scaling options, so that the CUPS raster is pixel-identical to the image. `[user]` | approved |
-| FR-8b.2 | Must | The image shall fill the whole raster: the photo is rotated to portrait and centre-cropped to the raster's aspect ratio (1248 : 1871), never letterboxed or distorted. `[user]` | approved |
-| FR-8b.3 | Must | The image shall be made from the final print image with this algorithm, as tested in B-1: (1) apply the EXIF orientation; (2) if an ICC profile is embedded, convert to sRGB; (3) rotate landscape to portrait (90°); (4) centre crop to 1248 : 1871 in source pixels; (5) resample to 1248 × 1871 with Lanczos (Pillow `LANCZOS`, kernel widened by the reduction factor); (6) unsharp mask radius 0.8 px, amount 60 %, threshold 2; (7) save as PNG, 300 dpi. `[user]` | approved |
+| FR-8b.1 | Must | The CUPS raster of each copy shall be pixel-identical to its prepared image (1248 × 1871 px at 300 dpi, FR-8b.3), i.e. CUPS shall not scale or resample it. `[user]` | approved |
+| FR-8b.2 | Must | The prepared image shall fill the whole raster with the photo, centred, with no letterbox bars and no change of the photo's aspect ratio. `[user]` | approved |
+| FR-8b.4 | Must | When preparing a copy's image fails, or takes longer than {{T_prepare}}, the booth shall send that copy as upstream does (its print image with `fit-to-page` and `landscape`) and log a warning with the cause (FR-14.1); FR-8b.1 does not apply to that copy. `[user]` | approved (`T_prepare` proposed) |
+| FR-8b.3 | Must | The prepared image shall be made from the image upstream's print path would send to CUPS (the photo with any print frame, text or QR code already applied) with this algorithm, as tested in B-1: (1) apply the EXIF orientation; (2) if an ICC profile is embedded, convert to sRGB; (3) rotate landscape to portrait (90°); (4) centre crop to 1248 : 1871 in source pixels; (5) resample to 1248 × 1871 with Lanczos (Pillow `LANCZOS`, kernel widened by the reduction factor); (6) unsharp mask radius 0.8 px, amount 60 %, threshold 2; (7) save as PNG, 300 dpi. `[user]` | approved |
 
 | ID | Precondition · stimulus | Expected observation | Must NOT happen | Tier |
 |---|---|---|---|---|
 | FR-8b.1 | 4509 × 3052 booth JPEG · prepare, then `cupsfilter` with the `selphy` PPD and the booth's `lp` options | raster 1248 × 1871, maximum pixel difference to the image 0 | any raster pixel differs; raster of another size | integration |
-| FR-8b.2 | Landscape 3:2, landscape 4:3 and portrait photos · prepare | 1248 × 1871, no uniform border row or column, aspect of the crop box within 0.1 % of 1248 : 1871 | white or black bars; stretched image | unit |
-| FR-8b.3 | Fixed reference photo set incl. EXIF orientation 6 and an embedded Adobe RGB profile · prepare | output equals the reference implementation's output (same Pillow version), maximum difference ≤ 1 | other resampling filter; orientation or colour profile ignored | unit |
+| FR-8b.2 | Landscape 3:2, landscape 4:3 and portrait photos · prepare | 1248 × 1871, no uniform border row or column, aspect of the crop box within 0.1 % of 1248 : 1871 `[user]` | white or black bars; stretched image | unit |
+| FR-8b.4 | Unreadable print image, and separately a preparation stopped after {{T_prepare}} · print | copy sent once by the upstream path, printed, warning with cause logged | copy not printed; printed twice; silent fallback | integration |
+| FR-8b.3 | Fixed reference photo set incl. EXIF orientation 6 and an embedded Adobe RGB profile · prepare | output equals the reference implementation's output (same Pillow version), maximum difference ≤ 1 per channel `[user]` | other resampling filter; orientation or colour profile ignored | unit |
 
 ---
 
@@ -573,7 +577,9 @@ Access reuses upstream's admin login `[user]`: the operator opens the login page
 | FR-12b.20 | Must | The printer status page shall also be usable on the booth laptop itself, reached the same way as on the phone (admin login → menu → "Drucker"), with the same content, decisions and confirmation step; no hidden gesture or separate staff screen. `[user]` OD12 | approved |
 | FR-12b.19 | Should | Shall show a warning when the startup check finds `FAST_RETURN=0` missing (NFR-13.4): "Druckstatus unzuverlässig – FAST_RETURN nicht gesetzt". `[derived]` R2 | approved |
 | FR-12b.21 | Must | The printer status page shall have a switch "Automatisch fortsetzen" (auto-resume, FR-6.15) on / off (manual resume). Default on; the setting survives a booth restart, applies from the next decision (a copy already waiting is evaluated again when it is switched on), is logged with time and browser, and is shown on every open printer status page. `[user]` OD13 | approved |
-| FR-12b.22 | Must | When the operator chooses "Foto fehlt" and the latest printer status query result is anything other than *Idle* with no printer error (error still active, *printing*, *no answer*, or no result yet), the printer status page shall show the power-cycle prompt (Appendix C) and shall apply "Foto fehlt" only after the operator confirms that the printer was switched off and on; that confirmation is logged with the decision (FR-14.1). `[user]` R18 | approved |
+| FR-12b.22 | Must | When the operator chooses "Foto fehlt" and the latest printer status query result is anything other than *Idle* with no printer error (error still active, *printing*, *no answer*, or no result yet), the printer status page shall show the power-cycle prompt (Appendix C) instead of the normal confirmation. `[user]` R18 | approved |
+| FR-12b.23 | Must | After the power-cycle prompt (FR-12b.22), the booth shall apply "Foto fehlt" only when the operator confirms that the printer was switched off and on; closing the prompt leaves the copy in its state. `[user]` R18 | approved |
+| FR-12b.24 | Must | A "Foto fehlt" applied through the power-cycle prompt shall be logged with the operator's power-cycle confirmation (FR-14.1). `[user]` R18 | approved |
 
 | ID | Precondition · stimulus | Expected observation | Must NOT happen | Tier |
 |---|---|---|---|---|
@@ -591,9 +597,11 @@ Access reuses upstream's admin login `[user]`: the operator opens the login page
 | FR-12b.12 | Any state | no cancel / enable buttons | queue re-enabled from the web UI | integration |
 | FR-12b.20 | Booth browser, `ERROR`, Wi-Fi off · admin login on the laptop → menu → "Drucker" → "Foto ist da", confirm | decision applied; queue re-enabled; guest print screen continues afterwards | page needs the phone; decision refused | e2e |
 | FR-12b.21 | Switch auto-resume off on the phone · restart booth | still off on every printer page; next error waits for the operator | reset to on; automatic decision | integration |
-| FR-12b.22 | `ERROR` `Paper Feed (02)`, simulated query: error still active · operator "Foto fehlt" | power-cycle prompt; copy resent only after "aus- und eingeschaltet" is confirmed; confirmation logged | copy resent without the prompt | integration |
-| FR-12b.22 | `ERROR`, simulated query: *Idle*, no error · operator "Foto fehlt" | normal confirmation (Appendix C), no power-cycle prompt, copy resent once | power-cycle prompt shown | integration |
-| FR-12b.22 | Power-cycle prompt shown · operator closes it | copy stays in `ERROR`, nothing resent | copy resent; decision logged | integration |
+| FR-12b.22 | `ERROR` `Paper Feed (02)`, simulated query: error still active · operator "Foto fehlt" | power-cycle prompt | normal confirmation shown; copy resent | integration |
+| FR-12b.22 | `ERROR`, simulated query: *Idle*, no error · operator "Foto fehlt" | normal confirmation (Appendix C), copy resent once after it | power-cycle prompt shown | integration |
+| FR-12b.23 | Power-cycle prompt shown · operator confirms "aus- und eingeschaltet" | "Foto fehlt" applied, copy resent once | copy resent before the confirmation; resent twice | integration |
+| FR-12b.23 | Power-cycle prompt shown · operator closes it | copy stays in `ERROR`, nothing resent | copy resent; decision applied or logged | integration |
+| FR-12b.24 | Prompt confirmed | log entry for the decision carries the power-cycle confirmation, time and browser | decision logged without it | unit |
 
 ---
 
@@ -651,7 +659,7 @@ Set up printer with `FAST_RETURN=0` and the printer-query root rule (§13, NFR-1
 
 | Tier | Where | Covers |
 |---|---|---|
-| unit | CI, no hardware | §5 state model, §7 text mapping, §9 query interpretation, gate logic as pure functions |
+| unit | CI, no hardware | §5 state model, §7 text mapping, §8b image preparation, §9 query interpretation, gate logic as pure functions |
 | integration | Virtual test setup (§17.1) on the Docker stack, driven through the booth's HTTP API and CUPS | §5–§9, §12b, exactly-once contracts in simulation |
 | e2e | Virtual test setup (§17.1) with real browsers (Playwright) acting as guest, admin and operator, the way people use the booth at an event | §6–§7, §12b, §17.5, exactly-once contracts as seen on screen |
 | bench | Event laptop + real SELPHY | B-1 (§17.3), §5.4 contracts on hardware, Appendix A |
@@ -907,6 +915,7 @@ How reliable the printer status query and auto-resume (FR-6.15) are gets checked
 | `T_cups_poll` | max delay for a CUPS error or backend message to reach the tracker | **2 s** `[user]`. B-1 and P-1: messages and errors within ~1.5 s at a ~1.3 s poll |
 | `T_printer_poll` | interval of the printer status query while the queue is stopped | **1 s** `[user]` (as in P-1) |
 | `T_query_hang` | a printer status query running longer than this is stopped and retried | **25 s** `[user]` (B-1 hangs 18.0–18.1 s, 3×; P-1 ~17 s) |
+| `T_prepare` | max time to prepare a copy's print image (§8b) before falling back (FR-8b.4) | **10 s** `proposed` (B-1: 2.6 s on the booth laptop) |
 | `T_ui` | max delay from event to screen (booth screen and operator web UI), and for print buttons to change state | **2 s** `[user]` |
 | `T_resume` | max delay from operator confirmation to queue enabled (incl. stopping a running printer query) | **5 s** `[user]` |
 | `LOW_THRESHOLD` | supply count at which the low warning starts (not a timing value; FR-8.2) | **3** `[user]` |
@@ -979,7 +988,7 @@ Removed in v0.16 with the ESP32 unit: `T_sent_to_pass1`, `T_pass`, `T_eject` (re
 | Automatic decision (FR-6.15) | Automatisch entschieden: Foto ist da – Drucker hat gedruckt (hh:mm:ss) / Foto fehlt – Drucker meldet keinen Druck |
 | Auto-resume switch (FR-12b.21) | Automatisch fortsetzen: an / aus |
 | FAST_RETURN missing (FR-12b.19) | Druckstatus unzuverlässig – FAST_RETURN nicht gesetzt |
-| Power cycle before "Foto fehlt" (FR-12b.22) — `proposed` | Der Drucker hat das Foto vielleicht noch und druckt es nach dem Beheben. Bitte Drucker aus- und wieder einschalten. · Drucker wurde aus- und eingeschaltet – Foto fehlt bestätigen |
+| Power cycle before "Foto fehlt" (FR-12b.22, FR-12b.23) — `proposed` | Der Drucker hat das Foto vielleicht noch und druckt es nach dem Beheben. Bitte Drucker aus- und wieder einschalten. · Drucker wurde aus- und eingeschaltet – Foto fehlt bestätigen |
 | After "Foto fehlt" (FR-8.10) | Blatt verbraucht? · Ja / Nein *(Ja: Papier −1, bei begonnenem Druck auch Farbe −1)* |
 
 The panel texts (old Appendix C, first table) were removed with the panel in v0.16.
@@ -988,7 +997,7 @@ The panel texts (old Appendix C, first table) were removed with the panel in v0.
 
 ```yaml
 document_status: draft
-fsd_version: 0.29
+fsd_version: 0.30
 repository: starkerflamingo32/photobooth (branch booth)
 baseline_commit: e8c2cbd3
 applicable_firmware_version: n/a (no ESP32 unit since v0.16)
@@ -1090,7 +1099,15 @@ change_history:
       from CUPS (duplicate in B-1 job 126), mitigation proposed
   - 2026-11-27 v0.29: R18 mitigation approved [user] — power cycle before a manual "Foto fehlt" unless the printer
       is Idle without an error (FR-12b.22); operator text proposed (Appendix C)
+  - 2026-11-27 v0.30: /define audit of v0.27–v0.29 (evolve-mode, requirement-quality): FR-12b.22 split into
+      FR-12b.22–12b.24 (atomic); FR-8b.1 states the result only, FR-8b.2 no longer repeats FR-8b.3; FR-8b.3 input
+      is upstream's print image [user]; FR-8b.4 fallback to the upstream path on failure [user], T_prepare 10 s
+      proposed; FR-7.21 preparation shown as the SENT text [user]; §8b tolerances approved; §8b purpose
+      present-state; §17.0 unit tier lists §8b
 superseded_requirements:
+  # v0.30
+  - FR-12b.22 v0.29 (prompt, apply-after-confirm and logging in one) — FR-12b.22, 12b.23, 12b.24
+  - FR-8b.1 v0.28 (incl. lossless, ppi=300 and option list) — result only; means in §8b.1
   # v0.28
   - T_query_hang 20 s (v0.27) — 25 s; print path `lp -o landscape -o fit-to-page <camera JPEG>` — §8b
   # v0.27
@@ -1148,7 +1165,7 @@ superseded_requirements:
   - FR-10.3 v0.1, FR-10.4 (CUPS-only fallback stages) — replaced by OD1
   - NFR-12.2 (some mechanism re-enables the queue) — booth reconciliation (FR-6.4, FR-6.11)
   - FR-13.x → FR-14.x (renumbered with the new §12)
-open_decisions: none open (Appendix C text for FR-12b.22 proposed)
+open_decisions: none open (proposed: Appendix C text for FR-12b.22, T_prepare 10 s)
 related_test_baseline: P-1 2026-11-26 (pre-bench, §17.3.1); B-1 2026-11-27 (jobs 125–129, §17.3.2); E-1 and §17.5 not run
 ```
 
