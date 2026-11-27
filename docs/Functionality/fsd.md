@@ -8,7 +8,7 @@
 |---|---|
 | Created | 2026-11-23 |
 | Last updated | 2026-11-27 |
-| Load defined | **No** — B-1 done 2026-11-27 (§17.3.2), Appendix A complete, all owner decisions made (R18 decided in v0.29). Still missing: approval of two proposed items (Appendix C text for FR-12b.22, `T_prepare` 10 s); Method/UserDocumentation planes; the full gate check of every Must/Should contract (`/define` §12.5). Not blocking: print-limit characterisation (§17.5) runs in Phase 1, since it needs the virtual test setup and FR-8.8 already states the requirement; auto-resume (FR-6.15) is checked at the first event (E-1, §17.6). |
+| Load defined | **No** — B-1 done 2026-11-27 (§17.3.2), Appendix A complete, all owner decisions made (R18 decided in v0.29). Still missing: approval of the Appendix C text for FR-12b.22 (`proposed`); Method/UserDocumentation planes; the full gate check of every Must/Should contract (`/define` §12.5). Not blocking: print-limit characterisation (§17.5) runs in Phase 1, since it needs the virtual test setup and FR-8.8 already states the requirement; auto-resume (FR-6.15) is checked at the first event (E-1, §17.6). |
 
 Full lifecycle metadata: Appendix D.
 
@@ -493,7 +493,7 @@ Reference implementation: `testing/bench/prescale-for-selphy.py` (B-1). Preparin
 |---|---|---|---|
 | FR-8b.1 | Must | The CUPS raster of each copy shall be pixel-identical to its prepared image (1248 × 1871 px at 300 dpi, FR-8b.3), i.e. CUPS shall not scale or resample it. `[user]` | approved |
 | FR-8b.2 | Must | The prepared image shall fill the whole raster with the photo, centred, with no letterbox bars and no change of the photo's aspect ratio. `[user]` | approved |
-| FR-8b.4 | Must | When preparing a copy's image fails, or takes longer than {{T_prepare}}, the booth shall send that copy as upstream does (its print image with `fit-to-page` and `landscape`) and log a warning with the cause (FR-14.1); FR-8b.1 does not apply to that copy. `[user]` | approved (`T_prepare` proposed) |
+| FR-8b.4 | Must | When preparing a copy's image fails, or takes longer than {{T_prepare}}, the booth shall send that copy as upstream does (its print image with `fit-to-page` and `landscape`) and log a warning with the cause (FR-14.1); FR-8b.1 does not apply to that copy. `[user]` | approved |
 | FR-8b.3 | Must | The prepared image shall be made from the image upstream's print path would send to CUPS (the photo with any print frame, text or QR code already applied) with this algorithm, as tested in B-1: (1) apply the EXIF orientation; (2) if an ICC profile is embedded, convert to sRGB; (3) rotate landscape to portrait (90°); (4) centre crop to 1248 : 1871 in source pixels; (5) resample to 1248 × 1871 with Lanczos (Pillow `LANCZOS`, kernel widened by the reduction factor); (6) unsharp mask radius 0.8 px, amount 60 %, threshold 2; (7) save as PNG, 300 dpi. `[user]` | approved |
 
 | ID | Precondition · stimulus | Expected observation | Must NOT happen | Tier |
@@ -915,7 +915,7 @@ How reliable the printer status query and auto-resume (FR-6.15) are gets checked
 | `T_cups_poll` | max delay for a CUPS error or backend message to reach the tracker | **2 s** `[user]`. B-1 and P-1: messages and errors within ~1.5 s at a ~1.3 s poll |
 | `T_printer_poll` | interval of the printer status query while the queue is stopped | **1 s** `[user]` (as in P-1) |
 | `T_query_hang` | a printer status query running longer than this is stopped and retried | **25 s** `[user]` (B-1 hangs 18.0–18.1 s, 3×; P-1 ~17 s) |
-| `T_prepare` | max time to prepare a copy's print image (§8b) before falling back (FR-8b.4) | **10 s** `proposed` (B-1: 2.6 s on the booth laptop) |
+| `T_prepare` | max time to prepare a copy's print image (§8b) before falling back (FR-8b.4) | **10 s** `[user]` (B-1: 2.6 s on the booth laptop) |
 | `T_ui` | max delay from event to screen (booth screen and operator web UI), and for print buttons to change state | **2 s** `[user]` |
 | `T_resume` | max delay from operator confirmation to queue enabled (incl. stopping a running printer query) | **5 s** `[user]` |
 | `LOW_THRESHOLD` | supply count at which the low warning starts (not a timing value; FR-8.2) | **3** `[user]` |
@@ -997,7 +997,7 @@ The panel texts (old Appendix C, first table) were removed with the panel in v0.
 
 ```yaml
 document_status: draft
-fsd_version: 0.30
+fsd_version: 0.31
 repository: starkerflamingo32/photobooth (branch booth)
 baseline_commit: e8c2cbd3
 applicable_firmware_version: n/a (no ESP32 unit since v0.16)
@@ -1104,6 +1104,7 @@ change_history:
       is upstream's print image [user]; FR-8b.4 fallback to the upstream path on failure [user], T_prepare 10 s
       proposed; FR-7.21 preparation shown as the SENT text [user]; §8b tolerances approved; §8b purpose
       present-state; §17.0 unit tier lists §8b
+  - 2026-11-27 v0.31: T_prepare 10 s approved [user]
 superseded_requirements:
   # v0.30
   - FR-12b.22 v0.29 (prompt, apply-after-confirm and logging in one) — FR-12b.22, 12b.23, 12b.24
@@ -1165,7 +1166,7 @@ superseded_requirements:
   - FR-10.3 v0.1, FR-10.4 (CUPS-only fallback stages) — replaced by OD1
   - NFR-12.2 (some mechanism re-enables the queue) — booth reconciliation (FR-6.4, FR-6.11)
   - FR-13.x → FR-14.x (renumbered with the new §12)
-open_decisions: none open (proposed: Appendix C text for FR-12b.22, T_prepare 10 s)
+open_decisions: none open (proposed: Appendix C text for FR-12b.22)
 related_test_baseline: P-1 2026-11-26 (pre-bench, §17.3.1); B-1 2026-11-27 (jobs 125–129, §17.3.2); E-1 and §17.5 not run
 ```
 
