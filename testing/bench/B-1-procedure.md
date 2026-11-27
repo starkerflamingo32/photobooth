@@ -81,18 +81,23 @@ Print 3: put the paper tray in **empty**. Print 4: take the **ink cassette out**
 
 6. **A:** `./cups-poll-test.sh watch ~/b1-p3-empty-tray-*`
 7. Pull the paper tray out, then press `t` in **A**.
-8. **B:** `cupsenable selphy` (add `sudo` if it is refused).
+8. **B:** `sudo cupsenable selphy` (`cupsenable` is in `/usr/sbin`).
 9. Watch **A**: if the job goes *processing* and then `No Paper (03)`, CUPS resent it,
    which means it would have been a **duplicate**. Press `x` and note what you saw.
-10. **B:** `cancel -a selphy`. Put the tray back in and press `i`, then `q` in **A**.
-11. `sudo ./cups-poll-test.sh collect ~/b1-p3-empty-tray-*`
+10. **With the tray still out, switch the printer off and on** (press `x`, note "power cycle").
+    The resent job is now inside the printer: `cancel` only removes it from CUPS, and putting
+    the tray back in would print the duplicate (happened in B-1 print 3). Then
+    **B:** `sudo cancel -a selphy`.
+11. Put the tray back in and press `i`. The printer must stay idle; if it prints, press `x`
+    and note it. Then `q` in **A**.
+12. `sudo ./cups-poll-test.sh collect ~/b1-p3-empty-tray-*`, then `sudo cupsenable selphy`.
 
 ## If a real jam happens (any print)
 
 Do not stop **A**. Start the printer query in **B** as in step 2. Press `x` and note
 "jam". Follow the printer's display (switch it off and on, clear the sheet), press `f`.
 Note whether the printer printed anything afterwards. Then do the duplicate check
-(steps 5–11).
+(steps 5–12).
 
 ## After the session
 
