@@ -5,8 +5,10 @@
 #
 # Run on the booth laptop:
 #   sudo ./cups-poll-test.sh prepare      # FAST_RETURN=0 + LogLevel debug, restart CUPS
-#   ./cups-poll-test.sh run <image.jpg> [label]  # poll, send one print, mark events by key
-#                                         # label names the folder, e.g. b1-p3-empty-tray
+#   ./cups-poll-test.sh run [--original] <image.jpg> [label]  # poll, send one print, mark events by key
+#                     label names the folder, e.g. b1-p3-empty-tray. The photo is first downscaled to the
+#                     printer's 1248x1871 raster (prescale-for-selphy.py) and sent with ppi=300;
+#                     --original sends the camera JPEG as the booth does today (fit-to-page landscape).
 #   ./cups-poll-test.sh watch <dir> [job]  # poll again without sending (duplicate check after run)
 #   sudo ./cups-poll-test.sh collect <dir> # copy the CUPS error_log for the run (redacted)
 #   sudo ./cups-poll-test.sh printer-poll <dir> # queue stopped: ask the printer itself (Ctrl-C before cupsenable)
@@ -19,7 +21,9 @@ BACKUP=/etc/cups/cupsd.conf.before-poll-test
 BACKEND_BIN=/usr/lib/cups/backend/gutenprint53+usb
 FILES_CONF=/etc/cups/cups-files.conf
 FILES_BACKUP=/etc/cups/cups-files.conf.before-poll-test
-LP_OPTS=(-o landscape -o fit-to-page)   # same as Photobooth's print command
+LP_OPTS=(-o landscape -o fit-to-page)   # same as Photobooth's print command (--original)
+LP_OPTS_PRESCALED=(-o ppi=300)         # prescaled PNG is already portrait at 300 dpi: place 1:1
+PRESCALE="$(dirname "$(readlink -f "$0")")/prescale-for-selphy.py"
 POLL=1           # seconds between polls (FSD: every second)
 TAIL_AFTER=60    # keep polling this long after the job leaves processing
 
@@ -141,7 +145,9 @@ EOF
 }
 
 run() {
-    local img=${1:?usage: $0 run <image.jpg> [label]} label=${2:-poll-test}
+    local original=0
+    [ "${1:-}" = --original ] && { original=1; shift; }
+    local img=${1:?usage: $0 run [--original] <image.jpg> [label]} label=${2:-poll-test}
     check_autoresume
     [ -r "$img" ] || { echo "Cannot read $img" >&2; exit 1; }
     if lpstat -W not-completed -o "$QUEUE" | grep -q .; then
@@ -155,6 +161,13 @@ run() {
 
     echo "Output: $OUT"
     echo "Image: $img"
+    local send=$img opts=("${LP_OPTS[@]}")
+    if [ "$original" = 0 ]; then
+        python3 -I "$PRESCALE" "$img" "$OUT/print.png"
+        send=$OUT/print.png opts=("${LP_OPTS_PRESCALED[@]}")
+    else
+        echo "prescale: off (--original), CUPS scales the camera JPEG"
+    fi
     # cupsd.conf is root-only; the prepare backup's existence is readable by anyone.
     if [ -e "$BACKUP" ]; then
         echo "prepare has run (backup $BACKUP exists): FAST_RETURN=0, LogLevel debug"
@@ -167,8 +180,8 @@ run() {
     read -r -p "Press Enter to send the print... " _
 
     poll_once
-    echo "$(now) SEND lp -d $QUEUE ${LP_OPTS[*]} $img" | tee -a "$OUT/events.log"
-    local resp; resp=$(lp -d "$QUEUE" "${LP_OPTS[@]}" "$img")
+    echo "$(now) SEND lp -d $QUEUE ${opts[*]} $send" | tee -a "$OUT/events.log"
+    local resp; resp=$(lp -d "$QUEUE" "${opts[@]}" "$send")
     echo "$(now) LP $resp" | tee -a "$OUT/events.log"
     JOB=$(echo "$resp" | grep -o "$QUEUE-[0-9]*" | sed 's/.*-//')
     write_ipp_tests

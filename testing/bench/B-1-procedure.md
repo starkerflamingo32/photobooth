@@ -6,11 +6,20 @@ measured values in FSD Appendix A and answers B-Q1…B-Q5.
 Uses 5 sheets and 5 ink panels. No jam is provoked (R15); a real jam is logged if
 one happens.
 
+**Downscaling test (bench experiment, not yet in the FSD):** by default `run` first
+downscales the photo with `prescale-for-selphy.py` to the exact CUPS raster size
+(1248 x 1871 px at 300 dpi, borderless, crop-to-fill, Lanczos + light sharpening) and
+sends it with `ppi=300`, so CUPS places it 1:1. `run --original` sends the camera JPEG
+the way the booth does today (CUPS shrinks it with `fit-to-page`). **Print 1 is the
+`--original` comparison print; prints 2–5 are prescaled.** Compare prints 1 and 2 side
+by side (same photo): fine detail (hair, text, edges), moiré, sharpness, white edges.
+
 ## Before you start
 
 - Booth laptop on, SELPHY on USB, full paper tray (≥ 5 sheets), ink cassette with
   ≥ 5 prints left. Booth lighting as at an event.
-- `cups-poll-test.sh` is in `~/` on the laptop (all commands below run in `~/`).
+- `cups-poll-test.sh` and `prescale-for-selphy.py` are in `~/` on the laptop (all commands
+  below run in `~/`).
 - One test photo, e.g. `~/b1.jpg`. Use the same JPG for all five prints.
 - Two terminals open on the laptop: **A** (prints) and **B** (printer query, sudo).
 - Phone on a stand, filming the printer front and back. At the start of each print, film
@@ -41,12 +50,14 @@ Press the key the moment you see the event: the timings are taken from your key 
 ## Prints 1, 2, 5 — normal print
 
 ```sh
-./cups-poll-test.sh run ~/b1.jpg b1-p1-normal      # p2: b1-p2-normal, p5: b1-p5-normal
+./cups-poll-test.sh run --original ~/b1.jpg b1-p1-original   # print 1: today's path
+./cups-poll-test.sh run ~/b1.jpg b1-p2-prescaled             # print 2: same photo, prescaled
+./cups-poll-test.sh run ~/b1.jpg b1-p5-prescaled             # print 5
 ```
 
 1. Press Enter to send. Press `p` on every rear pass and `e` on the eject.
 2. Polling stops by itself 60 s after the job is *completed* (only once `e` has been pressed).
-3. `sudo ./cups-poll-test.sh collect ~/b1-p1-normal-*` → it must say
+3. `sudo ./cups-poll-test.sh collect ~/b1-p1-original-*` (etc.) → it must say
    `OK: the backend got FAST_RETURN=0`.
 
 ## Prints 3 and 4 — error, fix, duplicate check
