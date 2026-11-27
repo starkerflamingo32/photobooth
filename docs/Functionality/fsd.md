@@ -8,7 +8,7 @@
 |---|---|
 | Created | 2026-11-23 |
 | Last updated | 2026-11-27 |
-| Load defined | **No** — B-1 done 2026-11-27 (§17.3.2), Appendix A complete, all owner decisions made (R18 decided in v0.29). Still missing: approval of the Appendix C text for FR-12b.22 (`proposed`); Method/UserDocumentation planes; the full gate check of every Must/Should contract (`/define` §12.5). Not blocking: print-limit characterisation (§17.5) runs in Phase 1, since it needs the virtual test setup and FR-8.8 already states the requirement; auto-resume (FR-6.15) is checked at the first event (E-1, §17.6). |
+| Load defined | **No** — B-1 done 2026-11-27 (§17.3.2), Appendix A complete, all owner decisions made (R18 decided in v0.29). Still missing: Method/UserDocumentation planes; the full gate check of every Must/Should contract (`/define` §12.5). Not blocking: print-limit characterisation (§17.5) runs in Phase 1, since it needs the virtual test setup and FR-8.8 already states the requirement; auto-resume (FR-6.15) is checked at the first event (E-1, §17.6). |
 
 Full lifecycle metadata: Appendix D.
 
@@ -988,7 +988,7 @@ Removed in v0.16 with the ESP32 unit: `T_sent_to_pass1`, `T_pass`, `T_eject` (re
 | Automatic decision (FR-6.15) | Automatisch entschieden: Foto ist da – Drucker hat gedruckt (hh:mm:ss) / Foto fehlt – Drucker meldet keinen Druck |
 | Auto-resume switch (FR-12b.21) | Automatisch fortsetzen: an / aus |
 | FAST_RETURN missing (FR-12b.19) | Druckstatus unzuverlässig – FAST_RETURN nicht gesetzt |
-| Power cycle before "Foto fehlt" (FR-12b.22, FR-12b.23) — `proposed` | Der Drucker hat das Foto vielleicht noch und druckt es nach dem Beheben. Bitte Drucker aus- und wieder einschalten. · Drucker wurde aus- und eingeschaltet – Foto fehlt bestätigen |
+| Power cycle before "Foto fehlt" (FR-12b.22, FR-12b.23) `[user]` v0.32 | Der Drucker hat das Foto vielleicht noch und druckt es nach dem Beheben. Bitte Drucker aus- und wieder einschalten. · Drucker wurde aus- und eingeschaltet – Foto fehlt bestätigen |
 | After "Foto fehlt" (FR-8.10) | Blatt verbraucht? · Ja / Nein *(Ja: Papier −1, bei begonnenem Druck auch Farbe −1)* |
 
 The panel texts (old Appendix C, first table) were removed with the panel in v0.16.
@@ -997,7 +997,7 @@ The panel texts (old Appendix C, first table) were removed with the panel in v0.
 
 ```yaml
 document_status: draft
-fsd_version: 0.31
+fsd_version: 0.32
 repository: starkerflamingo32/photobooth (branch booth)
 baseline_commit: e8c2cbd3
 applicable_firmware_version: n/a (no ESP32 unit since v0.16)
@@ -1105,6 +1105,7 @@ change_history:
       proposed; FR-7.21 preparation shown as the SENT text [user]; §8b tolerances approved; §8b purpose
       present-state; §17.0 unit tier lists §8b
   - 2026-11-27 v0.31: T_prepare 10 s approved [user]
+  - 2026-11-27 v0.32: Appendix C power-cycle text approved [user]; nothing proposed left
 superseded_requirements:
   # v0.30
   - FR-12b.22 v0.29 (prompt, apply-after-confirm and logging in one) — FR-12b.22, 12b.23, 12b.24
@@ -1166,7 +1167,7 @@ superseded_requirements:
   - FR-10.3 v0.1, FR-10.4 (CUPS-only fallback stages) — replaced by OD1
   - NFR-12.2 (some mechanism re-enables the queue) — booth reconciliation (FR-6.4, FR-6.11)
   - FR-13.x → FR-14.x (renumbered with the new §12)
-open_decisions: none open (proposed: Appendix C text for FR-12b.22)
+open_decisions: none open
 related_test_baseline: P-1 2026-11-26 (pre-bench, §17.3.1); B-1 2026-11-27 (jobs 125–129, §17.3.2); E-1 and §17.5 not run
 ```
 
