@@ -8,7 +8,7 @@
 |---|---|
 | Created | 2026-11-23 |
 | Last updated | 2026-11-27 |
-| Load defined | **No** — bench session B-1 not run (§17.3; pre-bench runs P-1 done: 2 normal prints, paper, ink and ink-sheet errors, §17.3.1; B-Q1–B-Q5 answered for one sample each), print-limit characterisation not run (§17.5), timing parameters open (Appendix A), open decision OD6 (§4.4, needs B-Q6; OD13 is a planned decision point after the first event, §17.6, and does not block "defined"), Method/UserDocumentation planes not created yet |
+| Load defined | **No** — all requirements approved and all owner decisions made (review 2026-11-27, v0.19–v0.24). Still missing: bench session B-1 (§17.3; P-1 done, B-Q1–B-Q5 answered for one sample each), which also decides OD6 and fills the measured timing values (Appendix A: stall limits, `T_cups_poll`); print-limit characterisation (§17.5, needs Phase 1); Method/UserDocumentation planes not created yet. OD13 is a planned decision point after the first event (§17.6) and does not block "defined". |
 
 Full lifecycle metadata: Appendix D.
 
@@ -841,7 +841,7 @@ How reliable the printer status query is gets decided at a real event, not on th
 
 Removed in v0.16 with the ESP32 unit: `T_sent_to_pass1`, `T_pass`, `T_eject` (replaced by the layer-message limits above), `T_rear_block`, `T_eject_settle`, `T_debounce`, `F_raw`, `T_fault`, `T_output_wait`, `T_confirm`, `T_alive`.
 
-## Appendix B — Messages (German; wording `proposed`)
+## Appendix B — Messages (German; wording approved `[user]` v0.24)
 
 **Stages**
 
@@ -885,7 +885,7 @@ Removed in v0.16 with the ESP32 unit: `T_sent_to_pass1`, `T_pass`, `T_eject` (re
 | Counter | low (FR-8.2) | Papier fast leer – noch n Blatt / Farbkassette fast leer – noch n Drucke *(staff notice)* |
 | Counter | zero (FR-8.4) | Papier laut Zähler leer / Farbkassette laut Zähler leer – bitte nachfüllen *(staff notice; printing continues)* |
 
-## Appendix C — Operator texts (German; wording `proposed`)
+## Appendix C — Operator texts (German; wording approved `[user]` v0.24)
 
 **Web UI (phone, §12b)** — shows the full Appendix B texts, the raw CUPS message and the evidence list.
 
@@ -909,7 +909,7 @@ The panel texts (old Appendix C, first table) were removed with the panel in v0.
 
 ```yaml
 document_status: draft
-fsd_version: 0.23
+fsd_version: 0.24
 repository: starkerflamingo32/photobooth (branch booth)
 baseline_commit: e8c2cbd3
 applicable_firmware_version: n/a (no ESP32 unit since v0.16)
@@ -995,6 +995,7 @@ change_history:
   - 2026-11-27 v0.22: review block 4 — T_take_hint 3 s, LOW_THRESHOLD 3, T_ui 2 s, T_resume 5 s
   - 2026-11-27 v0.23: review block 5 — FR-7.9, 8.9, 12b.7, 12b.10, 12b.12, 12b.15, 12b.19, NFR-13.4, FR-14.2
       approved; no requirement left `proposed`
+  - 2026-11-27 v0.24: review block 6 — Appendix B and C wording approved; header "Load defined" updated
 superseded_requirements:
   # v0.21
   - FR-8.4 v0.20 (count 0 blocks new prints and holds the next copy) — warning only (FR-8.4 v0.21)
