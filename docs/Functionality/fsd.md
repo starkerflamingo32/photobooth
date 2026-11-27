@@ -8,7 +8,7 @@
 |---|---|
 | Created | 2026-11-23 |
 | Last updated | 2026-11-27 |
-| Load defined | **No** — all requirements approved and all owner decisions made (review 2026-11-27, v0.19–v0.24). Still missing: bench session B-1 (§17.3; P-1 done, B-Q1–B-Q5 answered for one sample each), which fills the measured timing values (Appendix A: stall limits, `T_cups_poll`); print-limit characterisation (§17.5, needs Phase 1); Method/UserDocumentation planes not created yet. OD13 is a planned decision point after the first event (§17.6) and does not block "defined". |
+| Load defined | **No** — all requirements approved and all owner decisions made (review 2026-11-27, v0.19–v0.24). Still missing: bench session B-1 (§17.3; P-1 done, B-Q1–B-Q5 answered for one sample each), which fills the measured timing values (Appendix A: stall limits, `T_cups_poll`); print-limit characterisation (§17.5, needs Phase 1); Method/UserDocumentation planes not created yet. Auto-resume (FR-6.15) is checked at the first event (E-1, §17.6); that does not block "defined". |
 
 Full lifecycle metadata: Appendix D.
 
@@ -72,7 +72,8 @@ Guest presses "Drucken" (N copies)
 CUPS printer error at any point  → error screen + phone UI; queue stopped by the backend
   → booth queries the printer itself while the queue is stopped (printing → idle = photo printed)
   → operator fixes the printer; the printer usually prints the held photo by itself (P-1)
-  → operator confirms on the phone: "Foto ist da" / "Foto fehlt" (printer query shown as evidence)
+  → auto-resume on: booth decides from clean printer query evidence (printed → "Foto ist da"; lost → "Foto fehlt")
+  → otherwise (switch off, or evidence not clean): operator confirms on the phone: "Foto ist da" / "Foto fehlt"
   → booth reconciles the CUPS job (no duplicate), re-enables the queue, continues with copy k+1
 ```
 
@@ -149,7 +150,7 @@ Dependencies point downward only. §10–§12 (unit interface, ESP32 sensor unit
 | **2 — Booth logic + operator web UI + supply counters** | §5, §6, §7, §8, §9, §12b against the virtual test setup | All unit and integration tests pass; exactly-once contracts (§5.4) pass in simulation, with decisions made on the web UI | Phase 1 |
 | **3 — Bench session** | Bench session B-1 (§17.3) on the real SELPHY | B-1 run; B-Q1…B-Q5 answered (B-Q6 if seen); Appendix A filled | Phase 2 |
 | **4 — Acceptance** | §17.4 on the real booth | Acceptance list passes | Phase 3 |
-| **5 — First event** | Event observation E-1 (§17.6): printer query logged next to every operator decision | E-Q1 answered; OD13 decided | Phase 4 |
+| **5 — First event** | Event observation E-1 (§17.6): printer query logged next to every operator decision | E-Q1 answered; auto-resume default confirmed or changed | Phase 4 |
 
 ---
 
@@ -170,7 +171,7 @@ Dependencies point downward only. §10–§12 (unit interface, ESP32 sensor unit
 | R11 | The operator web UI adds network exposure: anyone on the booth Wi-Fi could make operator decisions. | WPA2 Wi-Fi joined only by laptop and operator phone; upstream admin login on the web UI (FR-12b.2); §15. |
 | R12 | Two browsers (two staff phones, or two tabs) give conflicting decisions. | First confirmed decision wins; later ones are ignored and every operator page shows the decision made (FR-12b.18). |
 | R13 | The fork is public and photobooth-setup is private: the fork's CI needs a token to build the stack, and test artifacts are visible to others. | Read-only fine-grained token on photobooth-setup only, as an Actions secret; synthetic test data only (§17.1.1, §17.2). |
-| R14 | While the queue is stopped, only a standalone status query (`gutenprint53+usb -s`) can see the printer print the held photo `[code]` P-1. It reconnects to the printer each time and twice per print hung ~17 s (`libusb error -7`) at a layer change; layer names around a hang were wrong. A query on the USB device while a CUPS backend prints could disturb the print. It needs root. | Use only *printing → Idle* from it, never layer names (FR-9.8); query only while the queue is disabled, never while a backend is attached or during `cupsenable` (FR-9.7); a hang is not an error (FR-9.9); root limited to this one command (NFR-15.4). It also shows a lost photo: after the ink-sheet error and a power cycle the printer went straight to *Idle* without printing (P-1 job 123). Whether it may decide on its own: OD13. |
+| R14 | While the queue is stopped, only a standalone status query (`gutenprint53+usb -s`) can see the printer print the held photo `[code]` P-1. It reconnects to the printer each time and twice per print hung ~17 s (`libusb error -7`) at a layer change; layer names around a hang were wrong. A query on the USB device while a CUPS backend prints could disturb the print. It needs root. | Use only *printing → Idle* from it, never layer names (FR-9.8); query only while the queue is disabled, never while a backend is attached or during `cupsenable` (FR-9.7); a hang is not an error (FR-9.9); root limited to this one command (NFR-15.4). It also shows a lost photo: after the ink-sheet error and a power cycle the printer went straight to *Idle* without printing (P-1 job 123). Decides on its own only on clean evidence and with the switch on (FR-6.15). |
 | R15 | Provoking a jam by hand does not give a clean jam: holding the sheet made the gears slip and **tore the ink sheet** (P-1 job 123), costing a cassette. `[code]` | B-1 print 5: no hand-held jam; use a spent or damaged cassette, or record a real jam when one happens (§17.3). `proposed` |
 | R17 | Stages and "done" now rest on the backend's message texts (`Printing YELLOW`, `Print complete`, …); a Gutenprint update could change them. `[derived]` | Gutenprint version pinned on the booth (§4.3); texts recorded in P-1/B-1 are test fixtures (§17.1); unknown messages are logged and never move a copy to `DONE` (FR-5.4). |
 
@@ -197,11 +198,11 @@ R4 (IR misreads) and R6 (ESP32 on the shared USB hub) were removed with the ESP3
 
 ### 4.4 Open decisions
 
-| ID | Decision | Gates | Proposal |
-|---|---|---|---|
-| OD13 *(planned decision point)* | May the booth reconcile **by itself** from the printer status query (*printing → Idle* after the error = photo printed → like "Foto ist da"; *Idle* after a power cycle without printing = lost → like "Foto fehlt"), or is the query only evidence for the operator's decision? | FR-6.4, FR-5.14, FR-9.8 | **Until E-1 is evaluated:** evidence only; the operator decides. **After E-1 (§17.6), if the query never gave a wrong *printed* or *nothing printed* in a clean run — middle option:** the booth decides by itself only on clean evidence and asks the operator otherwise: (a) *printing* seen, then *Idle*, with no *no answer* period in between → applied as "Foto ist da"; (b) *Idle* after a power cycle (printer unreachable, then back), *printing* never seen, no *no answer* period since the error → applied as "Foto fehlt"; (c) anything else (a hang or *no answer* in the window, the error still active, *printing* without *Idle*, an unknown state, a booth restart, FR-5.13) → operator decides as now. An automatic decision goes through the same reconciliation (FR-6.4), counts as the first decision (FR-12b.18), is logged with source *printer query* (FR-14.1), and is shown on the phone with its reason ("Automatisch entschieden: Foto ist da – Drucker hat gedruckt (14:32:05)"). If E-1 shows a wrong clean result even once, the operator keeps deciding in every case. (P-1: 2 of 2 correct, with ~17 s hangs, R14.) `proposed` |
+None open (v0.26). Decided and removed decisions, for traceability:
 
-OD1 (ESP32 unit offline), OD2 (IR events without a job) and OD8 (panel while the booth is unreachable) were removed with the ESP32 unit in v0.16. **OD13 is a planned decision point, not an open gap** `[user]`: the FSD is complete with its current behaviour (printer query as evidence only, operator decides), which stays in force until E-1 (§17.6, Phase 5) decides it. It does not block "Load defined"; deciding it later is a change to this FSD.
+OD1 (ESP32 unit offline), OD2 (IR events without a job) and OD8 (panel while the booth is unreachable) were removed with the ESP32 unit in v0.16.
+
+Decided in v0.26: OD13 — auto-resume (the former "middle option") is in force now: on clean printer query evidence the booth decides by itself, otherwise the operator decides; a switch on the printer page turns it off (manual resume) (FR-6.15, FR-12b.21). E-1 (§17.6) checks it at the first event. `[user]`
 
 Decided in v0.25: OD6 — a backend cancel with `0x0A` is a printer error, not a finished cancel; after the operator's fix the copy is resent as a new job (FR-5.18), so the print screen stays up and the cancelled-print question is moot. `[user]`
 
@@ -373,8 +374,9 @@ Decides whether the booth accepts a new print request. There is no print queue: 
 | FR-6.9 | Must | Print buttons on pages already open (result screen, gallery) shall show as disabled within {{T_ui}} of the booth becoming busy, and enabled again within {{T_ui}} of it becoming free. `[user]` | approved |
 | FR-6.10 | Must | A rejected request shall create no CUPS job and shall briefly show the guest the busy notice "Drucker beschäftigt – bitte warten, bis der aktuelle Druck fertig ist" (Appendix B). `[user]` OD5 | approved |
 | FR-6.2 | Must | While printing is blocked by a CUPS printer error and no print request is unfinished, taking photos, showing the result and the QR code shall keep working. `[user]` (While a request is unfinished the print screen stays up, FR-7.14.) | approved |
-| FR-6.4 | Must | On an operator decision for a job in `ERROR` or `AWAIT_OPERATOR`, the booth shall first stop any printer status query, then make CUPS match the decision ("Foto ist da": cancel the job if still pending; "Foto fehlt": keep it), then re-enable the queue. `[user]` (Automatic decisions from the query: OD13.) | approved |
+| FR-6.4 | Must | On an operator decision for a job in `ERROR` or `AWAIT_OPERATOR`, the booth shall first stop any printer status query, then make CUPS match the decision ("Foto ist da": cancel the job if still pending; "Foto fehlt": keep it), then re-enable the queue. `[user]` The same applies to an automatic decision (FR-6.15). | approved |
 | FR-6.11 | Must | Only the booth's reconciliation (FR-6.4) shall re-enable the CUPS queue; no other automatic `cupsenable` shall run. `[derived]` R3 | approved |
+| FR-6.15 | Must | **Auto-resume.** While the auto-resume switch is on (FR-12b.21) and a copy is in `ERROR` after a CUPS printer error, the booth shall decide by itself from the printer status query, only on clean evidence: (a) *printing* seen, then *Idle*, with no *no answer* period in between → "Foto ist da"; (b) the printer unreachable (power cycle), then *Idle*, *printing* never seen and no *no answer* period since the error → "Foto fehlt"; (c) anything else — a hang or *no answer* in the window, an error still active, *printing* without *Idle*, an unknown state, `AWAIT_OPERATOR` (stall, status unclear, booth restart), `0x0A` (FR-5.18) — the operator decides. An automatic decision goes through FR-6.4, counts as the first decision (FR-12b.18; an operator decision made earlier wins), is logged with source *printer query* (FR-14.1), and is shown on the phone with its reason. With the switch off (manual resume) the query is evidence only and the operator always decides. `[user]` OD13 | approved |
 
 | ID | Precondition · stimulus | Expected observation | Must NOT happen | Tier |
 |---|---|---|---|---|
@@ -386,6 +388,10 @@ Decides whether the booth accepts a new print request. There is no print queue: 
 | FR-6.2 | Printer error, no request unfinished · guest takes a photo | photo + QR shown | photo flow blocked | integration |
 | FR-6.4 | see §5.4; query running · operator decides | query stopped before `cupsenable` | query and backend on the USB device at once | integration + bench |
 | FR-6.11 | Queue stopped by simulated backend · wait 5 min | queue stays stopped until operator decision | queue re-enabled by anything else | integration |
+| FR-6.15 | Auto-resume on, `Paper Feed (02)` · simulated query: printing, Idle, no hang | "Foto ist da" applied automatically, job cancelled, queue re-enabled; phone shows "Automatisch entschieden: Foto ist da – Drucker hat gedruckt" | job resent; operator asked | integration |
+| FR-6.15 | Auto-resume on, `Unknown Error (0c)` · query: no answer (power cycle), then Idle, no printing | "Foto fehlt" applied automatically, copy printed once | copy lost; printed twice | integration |
+| FR-6.15 | Auto-resume on · query: printing, 17 s hang, Idle | operator asked | automatic decision | unit |
+| FR-6.15 | Auto-resume off · query: printing, Idle | evidence shown, operator asked | automatic decision | unit |
 
 ## 7. Print Screen
 
@@ -539,6 +545,7 @@ Access reuses upstream's admin login `[user]`: the operator opens the login page
 | FR-12b.12 | Must | Shall not offer actions beyond those in this section (no cancelling jobs, no re-enabling the queue directly, FR-6.11). `[derived]` R3 | approved |
 | FR-12b.20 | Must | The printer status page shall also be usable on the booth laptop itself, reached the same way as on the phone (admin login → menu → "Drucker"), with the same content, decisions and confirmation step; no hidden gesture or separate staff screen. `[user]` OD12 | approved |
 | FR-12b.19 | Should | Shall show a warning when the startup check finds `FAST_RETURN=0` missing (NFR-13.4): "Druckstatus unzuverlässig – FAST_RETURN nicht gesetzt". `[derived]` R2 | approved |
+| FR-12b.21 | Must | The printer status page shall have a switch "Automatisch fortsetzen" (auto-resume, FR-6.15) on / off (manual resume). Default on; the setting survives a booth restart, applies from the next decision (a copy already waiting is evaluated again when it is switched on), is logged with time and browser, and is shown on every open printer status page. `[user]` OD13 | approved |
 
 | ID | Precondition · stimulus | Expected observation | Must NOT happen | Tier |
 |---|---|---|---|---|
@@ -555,6 +562,7 @@ Access reuses upstream's admin login `[user]`: the operator opens the login page
 | FR-12b.7 | Page open, `ERROR` · cut the connection | "Keine Verbindung zur Booth", decision buttons gone | decision sent from stale page | integration |
 | FR-12b.12 | Any state | no cancel / enable buttons | queue re-enabled from the web UI | integration |
 | FR-12b.20 | Booth browser, `ERROR`, Wi-Fi off · admin login on the laptop → menu → "Drucker" → "Foto ist da", confirm | decision applied; queue re-enabled; guest print screen continues afterwards | page needs the phone; decision refused | e2e |
+| FR-12b.21 | Switch auto-resume off on the phone · restart booth | still off on every printer page; next error waits for the operator | reset to on; automatic decision | integration |
 
 ---
 
@@ -812,17 +820,17 @@ Raw logs stay on the laptop (`~/poll-test-20261126-*`: 172543, 173429, 175408, 1
 
 **Exit:** L-Q1…L-Q4 answered; results recorded in Appendix D (`related_test_baseline`). If L-Q1 shows the failure still on 49b09a94, the owner decides whether to report it upstream. L-Q2 must confirm the limit is inert before the next event (else FR-8.8 needs more than `print.limit` = 0). L-Q3 is input for whether auto-print is ever used.
 
-### 17.6 Event observation E-1 — printer query reliability
+### 17.6 Event observation E-1 — auto-resume at a real event
 
-How reliable the printer status query is gets decided at a real event, not on the bench: errors there are real (jams, empty trays at random points), and there are more of them than B-1 can provoke without wasting paper. `[user]`
+How reliable the printer status query and auto-resume (FR-6.15) are gets checked at a real event, not on the bench: errors there are real (jams, empty trays at random points), and there are more of them than B-1 can provoke without wasting paper. `[user]`
 
-**Setup:** the first event with the new print stack (Phase 5). The query runs as specified (FR-9.7) and its result is evidence only; the operator decides as usual (OD13 stays at "evidence only" for the whole event). The log (FR-14.1) already holds, per error: CUPS error, every query result with time, *no answer* periods, the operator decision. The operator also notes for each error what really happened (photo came out / not), e.g. by a short note on the phone or afterwards from the event photos and the paper count.
+**Setup:** the first event with the new print stack (Phase 5). Auto-resume is on (FR-12b.21 default) unless the operator switches it off. The log (FR-14.1) already holds, per error: CUPS error, every query result with time, *no answer* periods, and the decision with its source (printer query or operator). The operator also notes for each error what really happened (photo came out / not), e.g. by a short note on the phone or afterwards from the event photos and the paper count.
 
 | ID | Question |
 |---|---|
-| E-Q1 | Per error: did the query report *printed* exactly when the photo came out, and *nothing printed* when it did not? How often did it hang, for how long, and did a hang ever hide the *printing → Idle* change? Did any print made while the query ran come out damaged? (R14, FR-9.8, FR-9.9, OD13) |
+| E-Q1 | Per error: did the query report *printed* exactly when the photo came out, and *nothing printed* when it did not? How often did it hang, for how long, and did a hang ever hide the *printing → Idle* change? Did any print made while the query ran come out damaged? Was any automatic decision wrong (duplicate or missing photo)? How many errors did auto-resume decide alone? (R14, FR-6.15, FR-9.8, FR-9.9) |
 
-**Exit:** E-Q1 answered over all errors of the event; OD13 decided: the middle option (§4.4) only if no clean query result (no hang in its window) disagreed with the real outcome, otherwise operator decisions stay; also count how many errors the middle option would have decided alone; results in Appendix D (`related_test_baseline`). With few or no errors at the event, OD13 stays open and E-1 repeats at the next event.
+**Exit:** E-Q1 answered over all errors of the event; results in Appendix D (`related_test_baseline`). If any automatic decision was wrong, or a clean query result disagreed with the real outcome, the switch default becomes off (manual resume) until the cause is fixed; otherwise the default stays on. With few or no errors at the event, E-1 repeats at the next event.
 
 ---
 
@@ -906,6 +914,8 @@ Removed in v0.16 with the ESP32 unit: `T_sent_to_pass1`, `T_pass`, `T_eject` (re
 | Printer query: idle, nothing printed | Drucker meldet keinen Druck – Foto vermutlich verloren |
 | Printer query: printing | Drucker druckt gerade … |
 | Printer query: no answer | Drucker antwortet nicht – neuer Versuch … |
+| Automatic decision (FR-6.15) | Automatisch entschieden: Foto ist da – Drucker hat gedruckt (hh:mm:ss) / Foto fehlt – Drucker meldet keinen Druck |
+| Auto-resume switch (FR-12b.21) | Automatisch fortsetzen: an / aus |
 | FAST_RETURN missing (FR-12b.19) | Druckstatus unzuverlässig – FAST_RETURN nicht gesetzt |
 | After "Foto fehlt" (FR-8.10) | Blatt verbraucht? · Ja / Nein *(Ja: Papier −1, bei begonnenem Druck auch Farbe −1)* |
 
@@ -915,7 +925,7 @@ The panel texts (old Appendix C, first table) were removed with the panel in v0.
 
 ```yaml
 document_status: draft
-fsd_version: 0.25
+fsd_version: 0.26
 repository: starkerflamingo32/photobooth (branch booth)
 baseline_commit: e8c2cbd3
 applicable_firmware_version: n/a (no ESP32 unit since v0.16)
@@ -1005,7 +1015,11 @@ change_history:
   - 2026-11-27 v0.25: 0x0A identified from the Gutenprint source (Debian 12 and upstream) as "Incorrect media for job";
       OD6 decided — 0x0A is a printer error, copy resent after the fix (FR-5.18); R9, B-Q6 updated; Appendix B
       rows for 0a, 08 ("Incorrect Ink loaded" upstream, seen at the 2026-11-22 event) and 05; 0c is "Ink jam" upstream
+  - 2026-11-27 v0.26: OD13 decided — auto-resume (middle option) in force now (FR-6.15), switch "Automatisch
+      fortsetzen" on the printer page, default on (FR-12b.21); E-1 now checks auto-resume and sets the default
 superseded_requirements:
+  # v0.26
+  - OD13 v0.18–v0.25 (evidence only until E-1, middle option as proposed result) — auto-resume in force now with a switch (FR-6.15, FR-12b.21)
   # v0.21
   - FR-8.4 v0.20 (count 0 blocks new prints and holds the next copy) — warning only (FR-8.4 v0.21)
   # v0.20
@@ -1057,7 +1071,7 @@ superseded_requirements:
   - FR-10.3 v0.1, FR-10.4 (CUPS-only fallback stages) — replaced by OD1
   - NFR-12.2 (some mechanism re-enables the queue) — booth reconciliation (FR-6.4, FR-6.11)
   - FR-13.x → FR-14.x (renumbered with the new §12)
-open_decisions: none open; OD13 is a planned decision point after the first event (E-1), not a blocker
+open_decisions: none open
 related_test_baseline: P-1 2026-11-26 (pre-bench: 2 normal prints, paper, ink and ink-sheet errors, resend, §17.3.1); B-1, E-1 and §17.5 not run
 ```
 
