@@ -202,7 +202,7 @@ R4 (IR misreads) and R6 (ESP32 on the shared USB hub) were removed with the ESP3
 | OD4 | Booth page reload during a print (e.g. session reload): what does the screen show? | FR-7.12 | The print screen is restored from the tracker's state. `proposed` |
 | OD5 | Guest presses a print button while busy: what is shown? | FR-6.10 | Short notice "Drucker beschäftigt – bitte warten, bis der aktuelle Druck fertig ist". `proposed` |
 | OD6 | Job cancelled by the backend (status `0x0A`): resend the copy, or treat as failed? And after a cancelled print, does the booth go to the start screen (like FR-7.15) or back to the result view? | §5.2 (`CANCELLED`), FR-7.15 | Decide after B-Q6 has shown what `0x0A` means |
-| OD13 | May the booth reconcile **by itself** from the printer status query (*printing → Idle* after the error = photo printed → like "Foto ist da"; *Idle* after a power cycle without printing = lost → like "Foto fehlt"), or is the query only evidence for the operator's decision? | FR-6.4, FR-5.14, FR-9.8 | Evidence only until the first event; the operator decides. Decide from the event observation E-1 (§17.6): only if the query agreed with the operator in every error case (P-1: 2 of 2, with ~17 s hangs, R14). `proposed` |
+| OD13 | May the booth reconcile **by itself** from the printer status query (*printing → Idle* after the error = photo printed → like "Foto ist da"; *Idle* after a power cycle without printing = lost → like "Foto fehlt"), or is the query only evidence for the operator's decision? | FR-6.4, FR-5.14, FR-9.8 | **Until E-1 is evaluated:** evidence only; the operator decides. **After E-1 (§17.6), if the query never gave a wrong *printed* or *nothing printed* in a clean run — middle option:** the booth decides by itself only on clean evidence and asks the operator otherwise: (a) *printing* seen, then *Idle*, with no *no answer* period in between → applied as "Foto ist da"; (b) *Idle* after a power cycle (printer unreachable, then back), *printing* never seen, no *no answer* period since the error → applied as "Foto fehlt"; (c) anything else (a hang or *no answer* in the window, the error still active, *printing* without *Idle*, an unknown state, a booth restart, FR-5.13) → operator decides as now. An automatic decision goes through the same reconciliation (FR-6.4), counts as the first decision (FR-12b.18), is logged with source *printer query* (FR-14.1), and is shown on the phone with its reason ("Automatisch entschieden: Foto ist da – Drucker hat gedruckt (14:32:05)"). If E-1 shows a wrong clean result even once, the operator keeps deciding in every case. (P-1: 2 of 2 correct, with ~17 s hangs, R14.) `proposed` |
 
 OD1 (ESP32 unit offline), OD2 (IR events without a job) and OD8 (panel while the booth is unreachable) were removed with the ESP32 unit in v0.16. Decided in v0.17: OD11 (a photo left on the tray does no harm; take-photo message for {{T_take_hint}}, FR-7.19) and OD12 (fallback is the printer status page on the booth laptop, FR-12b.20). `[user]`
 
@@ -816,7 +816,7 @@ How reliable the printer status query is gets decided at a real event, not on th
 |---|---|
 | E-Q1 | Per error: did the query report *printed* exactly when the photo came out, and *nothing printed* when it did not? How often did it hang, for how long, and did a hang ever hide the *printing → Idle* change? Did any print made while the query ran come out damaged? (R14, FR-9.8, FR-9.9, OD13) |
 
-**Exit:** E-Q1 answered over all errors of the event; OD13 decided: automatic reconciliation only if the query agreed with the real outcome in every case; results in Appendix D (`related_test_baseline`). With few or no errors at the event, OD13 stays open and E-1 repeats at the next event.
+**Exit:** E-Q1 answered over all errors of the event; OD13 decided: the middle option (§4.4) only if no clean query result (no hang in its window) disagreed with the real outcome, otherwise operator decisions stay; also count how many errors the middle option would have decided alone; results in Appendix D (`related_test_baseline`). With few or no errors at the event, OD13 stays open and E-1 repeats at the next event.
 
 ---
 
@@ -905,7 +905,7 @@ The panel texts (old Appendix C, first table) were removed with the panel in v0.
 
 ```yaml
 document_status: draft
-fsd_version: 0.17
+fsd_version: 0.18
 repository: starkerflamingo32/photobooth (branch booth)
 baseline_commit: e8c2cbd3
 applicable_firmware_version: n/a (no ESP32 unit since v0.16)
@@ -977,6 +977,9 @@ change_history:
       OD12 decided — fallback is the printer status page on the booth laptop via admin login and menu, no hidden
       gesture (FR-12b.20); NFR-15.4 — needed root commands run without a password, approved; printer query
       reliability tested at a real event (§17.6 E-1, E-Q1 replaces B-Q9, Phase 5), OD13 decided from it
+  - 2026-11-27 v0.18: OD13 proposal — middle option after E-1: the booth decides by itself only on clean printer
+      query evidence (printing → Idle without a hang; Idle after a power cycle without printing), the operator
+      decides everything else; automatic decisions logged and shown on the phone with their reason
 superseded_requirements:
   # v0.17
   - FR-7.20 v0.16 (remind the guest to take an earlier photo before a new request) — not needed, photo on the tray does no harm
