@@ -2168,12 +2168,12 @@ tests:
   tier: e2e
   file: testing/e2e/tests/characterisation/upstream-print.spec.ts
   scenario: null
-  status: written
+  status: passing
   last_run:
-    date: null
-    commit: null
-    where: null
-    evidence: null
+    date: '2026-11-28'
+    commit: 1c45f93c
+    where: GitHub Actions run 46137659133 (refs 49b09a94, 76d76e36^, booth; all passed)
+    evidence: test-results/ (Playwright report, videos, traces, stack logs)
 - id: T-17.5-b
   verifies:
   - L-Q1
@@ -2181,12 +2181,12 @@ tests:
   tier: e2e
   file: testing/e2e/tests/characterisation/upstream-print.spec.ts
   scenario: null
-  status: written
+  status: passing
   last_run:
-    date: null
-    commit: null
-    where: null
-    evidence: null
+    date: '2026-11-28'
+    commit: 1c45f93c
+    where: GitHub Actions run 46137659133 (refs 49b09a94, 76d76e36^, booth; all passed)
+    evidence: test-results/ (Playwright report, videos, traces, stack logs)
 - id: T-17.5-c
   verifies:
   - L-Q2
@@ -2194,12 +2194,12 @@ tests:
   tier: e2e
   file: testing/e2e/tests/characterisation/upstream-print.spec.ts
   scenario: null
-  status: written
+  status: passing
   last_run:
-    date: null
-    commit: null
-    where: null
-    evidence: null
+    date: '2026-11-28'
+    commit: 1c45f93c
+    where: GitHub Actions run 46137659133 (refs 49b09a94, 76d76e36^, booth; all passed)
+    evidence: test-results/ (Playwright report, videos, traces, stack logs)
 - id: T-17.5-d
   verifies:
   - L-Q3
@@ -2207,12 +2207,12 @@ tests:
   tier: e2e
   file: testing/e2e/tests/characterisation/upstream-print.spec.ts
   scenario: null
-  status: written
+  status: passing
   last_run:
-    date: null
-    commit: null
-    where: null
-    evidence: null
+    date: '2026-11-28'
+    commit: aa2f9122
+    where: GitHub Actions run 46139977667 (S4 only; refs 49b09a94, 76d76e36^, booth; all passed)
+    evidence: test-results/ (Playwright report, videos, traces, stack logs)
 - id: T-17.5-e
   verifies:
   - L-Q4
@@ -2220,9 +2220,9 @@ tests:
   tier: e2e
   file: testing/e2e/tests/characterisation/upstream-print.spec.ts
   scenario: null
-  status: written
+  status: passing
   last_run:
-    date: null
-    commit: null
-    where: null
-    evidence: null
+    date: '2026-11-28'
+    commit: 1c45f93c
+    where: GitHub Actions run 46137659133 (refs 49b09a94, 76d76e36^, booth; all passed)
+    evidence: test-results/ (Playwright report, videos, traces, stack logs)
