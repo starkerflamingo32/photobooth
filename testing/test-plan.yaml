@@ -11,8 +11,8 @@ tests:
   scenario: null
   status: passing
   last_run:
-    date: '2026-11-27'
-    commit: f3ec6ed6+dirty
+    date: '2026-11-28'
+    commit: cc084df4+dirty
     where: local VM Docker
     evidence: test-results/ (Playwright report, videos, traces, stack logs)
 - id: T-17.1-b
@@ -24,8 +24,8 @@ tests:
   scenario: null
   status: passing
   last_run:
-    date: '2026-11-27'
-    commit: f3ec6ed6+dirty
+    date: '2026-11-28'
+    commit: cc084df4+dirty
     where: local VM Docker
     evidence: test-results/ (Playwright report, videos, traces, stack logs)
 - id: T-17.1-c
@@ -37,8 +37,8 @@ tests:
   scenario: null
   status: passing
   last_run:
-    date: '2026-11-27'
-    commit: f3ec6ed6+dirty
+    date: '2026-11-28'
+    commit: cc084df4+dirty
     where: local VM Docker
     evidence: test-results/ (Playwright report, videos, traces, stack logs)
 - id: T-17.1-d
@@ -50,8 +50,8 @@ tests:
   scenario: null
   status: passing
   last_run:
-    date: '2026-11-27'
-    commit: f3ec6ed6+dirty
+    date: '2026-11-28'
+    commit: cc084df4+dirty
     where: local VM Docker
     evidence: test-results/ (Playwright report, videos, traces, stack logs)
 - id: T-17.1-e
@@ -63,8 +63,8 @@ tests:
   scenario: null
   status: passing
   last_run:
-    date: '2026-11-27'
-    commit: f3ec6ed6+dirty
+    date: '2026-11-28'
+    commit: cc084df4+dirty
     where: local VM Docker
     evidence: test-results/ (Playwright report, videos, traces, stack logs)
 - id: T-17.1-f
@@ -76,8 +76,8 @@ tests:
   scenario: null
   status: passing
   last_run:
-    date: '2026-11-27'
-    commit: f3ec6ed6+dirty
+    date: '2026-11-28'
+    commit: cc084df4+dirty
     where: local VM Docker
     evidence: test-results/ (Playwright report, videos, traces, stack logs)
 - id: T-17.1-g
@@ -89,8 +89,8 @@ tests:
   scenario: null
   status: passing
   last_run:
-    date: '2026-11-27'
-    commit: f3ec6ed6+dirty
+    date: '2026-11-28'
+    commit: cc084df4+dirty
     where: local VM Docker
     evidence: test-results/ (Playwright report, videos, traces, stack logs)
 - id: T-17.1-h
@@ -102,8 +102,8 @@ tests:
   scenario: null
   status: passing
   last_run:
-    date: '2026-11-27'
-    commit: f3ec6ed6+dirty
+    date: '2026-11-28'
+    commit: cc084df4+dirty
     where: local VM Docker
     evidence: test-results/ (Playwright report, videos, traces, stack logs)
 - id: T-17.1-i
@@ -115,8 +115,8 @@ tests:
   scenario: null
   status: passing
   last_run:
-    date: '2026-11-27'
-    commit: f3ec6ed6+dirty
+    date: '2026-11-28'
+    commit: cc084df4+dirty
     where: local VM Docker
     evidence: test-results/ (Playwright report, videos, traces, stack logs)
 - id: T-17.1-j
@@ -128,8 +128,8 @@ tests:
   scenario: null
   status: passing
   last_run:
-    date: '2026-11-27'
-    commit: f3ec6ed6+dirty
+    date: '2026-11-28'
+    commit: cc084df4+dirty
     where: local VM Docker
     evidence: test-results/ (Playwright report, videos, traces, stack logs)
 - id: T-17.1-k
@@ -1931,14 +1931,14 @@ tests:
   - NFR-13.2
   contract: Booth after a photobooth-setup run · read `/etc/cups/cups-files.conf`; during a simulated print read the backend process's environment → `SetEnv FAST_RETURN 0` present (not only in `cupsd.conf`); backend runs with `FAST_RETURN=0`
   tier: integration
-  file: null
-  scenario: null
-  status: planned
+  file: testing/e2e/tests/integration/deployment.spec.ts
+  scenario: normal
+  status: passing
   last_run:
-    date: null
-    commit: null
-    where: null
-    evidence: null
+    date: '2026-11-28'
+    commit: cc084df4+dirty
+    where: local VM Docker
+    evidence: test-results/ (Playwright report, videos, traces, stack logs)
 - id: T-13-b
   verifies:
   - NFR-13.2

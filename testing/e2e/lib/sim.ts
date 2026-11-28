@@ -11,6 +11,7 @@ export type BackendRun = {
     run: number;
     cups_job: number;
     fast_return: boolean;
+    fast_return_env: string | null;
     exit: number | string | null;
     messages: { time: string; line: string }[];
 };
