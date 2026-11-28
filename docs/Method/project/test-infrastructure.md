@@ -119,6 +119,6 @@ All workflows run in the fork. `[user]`
 
 - Upstream workflows not needed by the fork (crowdin ×3, `publish_docs.yml`, `build-faq.yml`, `release.yml`, `installer.yaml`) are disabled.
 - photobooth-setup is checked out at the commit in `testing/setup-ref`; bumping that file is how the fork picks up a deployment change.
-- Access to the private photobooth-setup repo: a fine-grained token, read-only on that one repo, stored as the Actions secret `SETUP_REPO_TOKEN`; `e2e.yml` fails with that message when it is missing. Secrets are not given to pull requests from other forks, so those runs skip `e2e.yml` and run `ci.yml` only. (R13)
+- Access to the private photobooth-setup repo: a fine-grained token, read-only on that one repo, stored as the Actions secret `PHOTOBOOTH_SETUP_TOKEN`; `e2e.yml` fails with that message when it is missing. Secrets are not given to pull requests from other forks, so those runs skip `e2e.yml` and run `ci.yml` only. (R13)
 - **Not possible in Actions:** USB hardware — the real SELPHY (bench, acceptance); deploying to the laptop. No self-hosted runner on the booth laptop: on a public repo it would run code from strangers' pull requests. `[derived]`
 - Public repo: standard GitHub-hosted runners cost nothing. `[code]` (repository visibility)

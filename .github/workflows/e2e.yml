@@ -20,17 +20,17 @@ jobs:
         run: echo "ref=$(cat photobooth/testing/setup-ref)" >> "$GITHUB_OUTPUT"
       - name: Check the photobooth-setup token
         env:
-          TOKEN: ${{ secrets.SETUP_REPO_TOKEN }}
+          TOKEN: ${{ secrets.PHOTOBOOTH_SETUP_TOKEN }}
         run: |
           if [ -z "$TOKEN" ]; then
-            echo "::error::Secret SETUP_REPO_TOKEN missing: a fine-grained, read-only token on photobooth-setup (R13)."
+            echo "::error::Secret PHOTOBOOTH_SETUP_TOKEN missing: a fine-grained, read-only token on photobooth-setup (R13)."
             exit 1
           fi
       - uses: actions/checkout@v7
         with:
           repository: starkerflamingo32/photobooth-setup
           ref: ${{ steps.setup.outputs.ref }}
-          token: ${{ secrets.SETUP_REPO_TOKEN }}
+          token: ${{ secrets.PHOTOBOOTH_SETUP_TOKEN }}
           path: photobooth-setup
           persist-credentials: false
       - name: Integration suite
