@@ -155,17 +155,26 @@ test('T-17.5-d S4 auto-print with 2 s delay: reloads, stopped queue, running pri
     await snap(booth, 'auto-print-queue-stopped');
     const st = await sim.cupsStatus();
     answer('S4b second auto-print while the queue is stopped: CUPS jobs not completed: ' + st.jobs_not_completed.trim().split('\n').length);
-    // c) a print running
+    // c) a print running. Real-time clock: at the default scale a whole print
+    // (56 simulated s) fits into the waits below and the prints never overlap.
     await sim.reset();
-    await sim.scenario('normal');
+    await sim.scenarioText('id: normal-real-time\nprinter: {tray: ok, ink: ok}\nclock: {scale: 1}\n');
     await openBooth(booth);
     await takePhoto(booth);
-    await booth.waitForTimeout(3000);
+    await sim.waitFor((s) => s.received.length === 1, 'first auto-print at the printer', 30_000);
     await openBooth(booth);
     await takePhoto(booth);
-    await booth.waitForTimeout(3000);
+    await booth.waitForTimeout(4000);
     s = await sim.state();
-    answer(`S4c second photo with auto-print while the first print runs: printer state ${s.state}, jobs received ${s.received.length}`);
+    // Precondition: the first print is still running when the second photo is done.
+    expect(s.outputs.length, 'first print already finished; S4c would not test a running print').toBe(0);
+    const pending = (await sim.cupsStatus()).jobs_not_completed.trim();
+    answer(
+        `S4c second photo with auto-print while the first print runs: printer state ${s.state}, ` +
+            `jobs received ${s.received.length}, CUPS jobs not completed ${pending ? pending.split('\n').length : 0}`,
+    );
+    s = await sim.waitFor((s) => s.outputs.length === 2 && s.state === 'idle', 'both photos out', 150_000);
+    answer(`S4c after the first print: photos out ${s.outputs.length}, jobs received ${s.received.length}`);
 });
 
 /**

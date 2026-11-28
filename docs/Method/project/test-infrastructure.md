@@ -112,7 +112,7 @@ All workflows run in the fork. `[user]`
 |---|---|---|---|
 | `ci.yml` | every push / PR to `booth` | upstream build and checks (cgl, lint, PHPStan, PHPUnit, ESLint), test plan coverage in the run summary, shellcheck of `testing/` scripts | ~3 min |
 | `e2e.yml` | every push to `booth`, by hand | build the virtual stack (above), run integration + e2e suites; upload Playwright report, videos, traces and logs as artifacts; failed tests listed in the run summary | ~15 min (assumed) |
-| `upstream-characterisation.yml` | by hand, input: refs (default upstream `dev` 49b09a94, `76d76e36^`, and `booth`) | run the FSD §17.5 suite against each ref; publish the L-Q answers as the run summary and an artifact | ~15 min (assumed) |
+| `upstream-characterisation.yml` | by hand, inputs: refs (default upstream `dev` 49b09a94, `76d76e36^`, and `booth`), grep (optional test-title filter, e.g. `S4`) | run the FSD §17.5 suite against each ref; publish the L-Q answers as the run summary and an artifact | ~17 min for all of S1–S5; artifacts ~315 MB per ref |
 | `upstream-drift.yml` | weekly | merge upstream `dev` into a scratch branch, run `ci.yml` + `e2e.yml`; open an issue if anything breaks | |
 | `package.yml` (existing, adapted) | tag | prebuilt release package so the laptop needs no npm/gulp build | |
 | shellcheck | in photobooth-setup, on push | `native/*.sh` | |

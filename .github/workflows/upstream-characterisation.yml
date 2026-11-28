@@ -8,6 +8,9 @@ on:
       refs:
         description: Refs to run against (JSON list)
         default: '["49b09a94", "76d76e36^", "booth"]'
+      grep:
+        description: Only tests whose title matches (Playwright -g), e.g. S4; empty runs all
+        default: ''
 
 jobs:
   characterise:
@@ -37,7 +40,8 @@ jobs:
         env:
           SETUP_DIR: ${{ github.workspace }}/photobooth-setup
           BOOTH_REF: ${{ matrix.ref }}
-        run: testing/run.sh test characterisation
+          GREP: ${{ inputs.grep }}
+        run: testing/run.sh test characterisation ${GREP:+-g "$GREP"}
       - name: Answers
         if: always()
         working-directory: photobooth
